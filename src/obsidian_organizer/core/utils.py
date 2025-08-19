@@ -1,4 +1,17 @@
+import re
+
 import yaml
+
+WIKILINK_PATTERN = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]")
+TAG_PATTERN = re.compile(r"(?<!\w)#([\w/]+)")
+
+
+def extract_wikilinks(text: str):
+    return [m.group(1) for m in WIKILINK_PATTERN.finditer(text)]
+
+
+def extract_tags(text: str):
+    return TAG_PATTERN.findall(text)
 
 
 def parse_frontmatter(content: str):
