@@ -4,21 +4,17 @@ version = "0.1.0"
 description = "AI agent for organizing Obsidian vaults"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "langchain>=0.3.27",
+    "langchain-community>=0.3.27",
+    "langchain-ollama>=0.3.6",
+    "langgraph>=0.6.5",
+]
 
 
 [dependency-groups]
-dev = ["mypy>=1.17.1", "ruff>=0.12.9"]
+dev = ["ruff>=0.12.9"]
 
 [tool.ruff]
 select = ["E", "F", "I", "UP"]
 ignore = ["F401", "F841", "F403", "F405"]
-
-[tool.mypy]
-python_version = "3.12"
-strict = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-warn_return_any = true
-warn_unused_ignores = true
