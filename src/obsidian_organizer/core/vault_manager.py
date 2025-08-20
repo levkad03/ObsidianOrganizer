@@ -6,6 +6,7 @@ from obsidian_organizer.core.utils import (
     extract_tags,
     extract_wikilinks,
     parse_frontmatter,
+    safe_write,
 )
 
 
@@ -43,7 +44,8 @@ class ObsidianVault:
         file_path = self._resolve_path(name)
         if not file_path.exists():
             raise FileNotFoundError(f"Note '{name}' not found in vault")
-        file_path.write_text(yaml_block + content, encoding="utf-8")
+
+        safe_write(file_path, yaml_block + content)
 
     def build_index(self):
         index = {}

@@ -1,4 +1,6 @@
 import re
+import tempfile
+from pathlib import Path
 
 import yaml
 
@@ -24,3 +26,11 @@ def parse_frontmatter(content: str):
             return metadata, body.strip()
 
     return {}, content
+
+
+def safe_write(file_path: Path, content: str):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=file_path.parent)
+    temp_file.write(content.encode("utf-8"))
+    temp_file.close()
+    temp_file_path = Path(temp_file.name)
+    temp_file_path.replace(file_path)
