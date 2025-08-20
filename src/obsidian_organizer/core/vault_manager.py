@@ -22,7 +22,13 @@ class ObsidianVault:
     def _resolve_path(self, name: str) -> Path:
         if not name.endswith(".md"):
             name += ".md"
-        return self.path / name
+
+        file_path = (self.path / name).resolve()
+
+        if not str(file_path).startswith(str(self.path.resolve())):
+            raise ValueError("Attempted access outside of vault")
+
+        return file_path
 
     def read_note(self, name: str):
         file_path = self._resolve_path(name)
