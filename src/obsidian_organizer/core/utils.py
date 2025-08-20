@@ -1,6 +1,7 @@
 import re
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -8,7 +9,7 @@ WIKILINK_PATTERN = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]")
 TAG_PATTERN = re.compile(r"(?<!\w)#([\w/]+)")
 
 
-def extract_wikilinks(text: str):
+def extract_wikilinks(text: str) -> list[str]:
     """
     Extract Obsidian-style wikilinks from a text string.
 
@@ -26,7 +27,7 @@ def extract_wikilinks(text: str):
     return [m.group(1) for m in WIKILINK_PATTERN.finditer(text)]
 
 
-def extract_tags(text: str):
+def extract_tags(text: str) -> list[str]:
     """
     Extract tags from markdown text.
 
@@ -43,7 +44,7 @@ def extract_tags(text: str):
     return TAG_PATTERN.findall(text)
 
 
-def parse_frontmatter(content: str):
+def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """
     Parse YAML frontmatter from markdown content.
 
@@ -72,7 +73,7 @@ def parse_frontmatter(content: str):
     return {}, content
 
 
-def safe_write(file_path: Path, content: str):
+def safe_write(file_path: Path, content: str) -> None:
     """
     Safely write text content to a file.
 

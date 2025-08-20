@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -19,7 +20,7 @@ class ObsidianVault:
     access outside of the vault directory.
     """
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path) -> None:
         """
         Initialize the vault manager.
 
@@ -34,7 +35,7 @@ class ObsidianVault:
         if not (self.path / ".obsidian").exists():
             raise ValueError("Not a valid obsidian vault")
 
-    def list_notes(self):
+    def list_notes(self) -> list[Path]:
         """
         List all markdown notes in the vault.
 
@@ -68,7 +69,7 @@ class ObsidianVault:
 
         return file_path
 
-    def read_note(self, name: str):
+    def read_note(self, name: str) -> dict[str, Any]:
         """
         Read a note from the vault and parse its frontmatter.
 
@@ -90,7 +91,7 @@ class ObsidianVault:
         meta, body = parse_frontmatter(text)
         return {"metadata": meta, "content": body}
 
-    def write_note(self, name: str, metadata: dict, content: str):
+    def write_note(self, name: str, metadata: dict, content: str) -> None:
         """
         Safely write content and metadata to an existing note.
 
@@ -112,7 +113,7 @@ class ObsidianVault:
 
         safe_write(file_path, yaml_block + content)
 
-    def build_index(self):
+    def build_index(self) -> dict[str, dict[str, Any]]:
         """
         Build an index of all notes in the vault.
 
