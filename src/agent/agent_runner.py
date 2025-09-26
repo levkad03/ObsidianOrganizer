@@ -1,7 +1,7 @@
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 
-from obsidian_organizer.agent.tools import (
+from src.agent.tools import (
     build_index_tool,
     list_notes_tool,
     read_note_tool,

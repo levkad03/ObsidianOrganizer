@@ -1,4 +1,4 @@
-from obsidian_organizer.agent.agent_runner import agent
+from src.agent.agent_runner import agent
 
 
 def main():

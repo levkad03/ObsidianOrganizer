@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.obsidian_organizer.core.vault_manager import ObsidianVault
+from src.core.vault_manager import ObsidianVault
 
 
 # Helpers

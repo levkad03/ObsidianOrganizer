@@ -3,7 +3,7 @@ from typing import Any
 
 import yaml
 
-from obsidian_organizer.core.utils import (
+from src.core.utils import (
     extract_tags,
     extract_wikilinks,
     parse_frontmatter,

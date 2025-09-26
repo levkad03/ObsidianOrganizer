@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain.tools import tool
 
-from obsidian_organizer.core.vault_manager import ObsidianVault
+from src.core.vault_manager import ObsidianVault
 
 vault = ObsidianVault(Path("D:\Obsidian Notes\Test Vault"))
 
