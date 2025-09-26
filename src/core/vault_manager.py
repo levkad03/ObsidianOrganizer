@@ -113,6 +113,30 @@ class ObsidianVault:
 
         safe_write(file_path, yaml_block + content)
 
+    def create_note(
+        self, name: str, metadata: dict | None = None, content: str = ""
+    ) -> Path:
+        """Create a new note in the vault and write optional metadata and content.
+
+        Args:
+            name (str): Note name (with or without .md).
+            metadata (dict | None, optional): Metadata to include as YAML frontmatter. Defaults to None.
+            content (str, optional): Body text of the note. Defaults to "".
+
+        Returns:
+            Path: The path to the created note file.
+
+        Raises:
+            FileExistsError: If a note with the given name already exists.
+        """
+        yaml_block = f"---\n{yaml.safe_dump(metadata)}---\n\n" if metadata else ""
+        file_path = self._resolve_path(name)
+        if file_path.exists():
+            raise FileExistsError(f"Note '{name}' already exists in vault")
+
+        safe_write(file_path, yaml_block + content)
+        return file_path
+
     def update_note(
         self,
         name: str,

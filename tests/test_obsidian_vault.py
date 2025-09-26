@@ -140,3 +140,26 @@ Body
     assert "author: new" in text
     assert "tags:" in text
     assert "Body" in text
+
+
+def test_create_note_with_content_and_metadata(tmp_path):
+    vault = make_vault(tmp_path)
+    obsidian = ObsidianVault(vault)
+
+    file = obsidian.create_note(
+        "NewNote", metadata={"author": "tester"}, content="Hello Obsidian\n"
+    )
+
+    assert file.exists()
+    text = file.read_text(encoding="utf-8")
+    assert "author: tester" in text
+    assert "Hello Obsidian" in text
+
+
+def test_create_note_existing_raises(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "ExistNote", "Already here")
+
+    obsidian = ObsidianVault(vault)
+    with pytest.raises(FileExistsError):
+        obsidian.create_note("ExistNote", content="New content")
