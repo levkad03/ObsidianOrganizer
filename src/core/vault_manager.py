@@ -62,9 +62,13 @@ class ObsidianVault:
         if not name.endswith(".md"):
             name += ".md"
 
-        file_path = (self.path / name).resolve()
+        # Allow folder separators in the note name, normalize via Path
+        file_path = (self.path / Path(name)).resolve()
 
-        if not str(file_path).startswith(str(self.path.resolve())):
+        try:
+            # prefer Path.relative_to for robust containment check
+            file_path.relative_to(self.path.resolve())
+        except Exception:
             raise ValueError("Attempted access outside of vault")
 
         return file_path
@@ -91,28 +95,6 @@ class ObsidianVault:
         meta, body = parse_frontmatter(text)
         return {"metadata": meta, "content": body}
 
-    def write_note(self, name: str, metadata: dict, content: str) -> None:
-        """
-        Safely write content and metadata to an existing note.
-
-        Overwrites the note content after prepending YAML frontmatter.
-        Uses atomic writes to avoid file corruption.
-
-        Args:
-            name (str): The name of the note to update.
-            metadata (dict): Metadata to include as YAML frontmatter.
-            content (str): Body text of the note.
-
-        Raises:
-            FileNotFoundError: If the note does not exist in the vault.
-        """
-        yaml_block = f"---\n{yaml.safe_dump(metadata)}---\n\n" if metadata else ""
-        file_path = self._resolve_path(name)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Note '{name}' not found in vault")
-
-        safe_write(file_path, yaml_block + content)
-
     def create_note(
         self, name: str, metadata: dict | None = None, content: str = ""
     ) -> Path:
@@ -133,6 +115,11 @@ class ObsidianVault:
         file_path = self._resolve_path(name)
         if file_path.exists():
             raise FileExistsError(f"Note '{name}' already exists in vault")
+
+        # Ensure parent directories exist for foldered notes
+        parent = file_path.parent
+        if not parent.exists():
+            parent.mkdir(parents=True, exist_ok=True)
 
         safe_write(file_path, yaml_block + content)
         return file_path
@@ -161,6 +148,10 @@ class ObsidianVault:
         """
 
         file_path = self._resolve_path(name)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"Note '{name}' not found in vault")
+
         text = file_path.read_text(encoding="utf-8")
         existing_meta, body = parse_frontmatter(text)
 
@@ -174,7 +165,7 @@ class ObsidianVault:
         if content is None:
             new_body = body
         else:
-            new_body = (body + content) if append else (content + body)
+            new_body = (body + "\n" + content) if append else (content + "\n" + body)
 
         yaml_block = (
             f"---\n{yaml.safe_dump(existing_meta)}---\n\n" if existing_meta else ""

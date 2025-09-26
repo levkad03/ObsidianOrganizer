@@ -7,7 +7,7 @@ def main():
             "messages": [
                 {
                     "role": "user",
-                    "content": "Can you list all my notes?",
+                    "content": "In folder Machine Learning, there is a note named Test note. Can you add in the end of the note the following content: 'SIFT is a feature detection algorithm used in computer vision tasks.' ",
                 }
             ]
         }

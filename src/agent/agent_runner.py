@@ -8,7 +8,6 @@ from src.agent.tools import (
     list_notes_tool,
     read_note_tool,
     update_note_tool,
-    write_note_tool,
 )
 
 load_dotenv()  # Load environment variables from .env file
@@ -18,7 +17,6 @@ llm = ChatOllama(model="qwen3:1.7b", reasoning=True)
 tools = [
     list_notes_tool,
     read_note_tool,
-    write_note_tool,
     build_index_tool,
     create_note_tool,
     update_note_tool,

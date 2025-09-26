@@ -10,20 +10,15 @@ vault = ObsidianVault(Path("D:\Obsidian Notes\Test Vault"))
 @tool
 def list_notes_tool() -> list[str]:
     """List all note filenames in the vault."""
-    return [str(p.name) for p in vault.list_notes()]
+    # Return relative paths for better readability
+    return [str(p.relative_to(vault.path)) for p in vault.list_notes()]
 
 
 @tool
-def read_note_tool(name: str) -> dict:
-    """Read a note by name and return its metadata and content."""
-    return vault.read_note(name)
-
-
-@tool
-def write_note_tool(name: str, metadata: dict, content: str) -> str:
-    """Write new metadata and content to an existing note."""
-    vault.write_note(name, metadata, content)
-    return f"Note {name} updated successfuly."
+def read_note_tool(name: str, folder: str | None = None) -> dict:
+    """Read a note by name and optional folder and return its metadata and content."""
+    full_name = f"{folder}/{name}" if folder else name
+    return vault.read_note(full_name)
 
 
 @tool
@@ -34,11 +29,15 @@ def build_index_tool() -> dict:
 
 @tool
 def create_note_tool(
-    name: str, metadata: dict | None = None, content: str | None = ""
+    name: str,
+    metadata: dict | None = None,
+    content: str | None = "",
+    folder: str | None = None,
 ) -> str:
-    """Create a new note with optional metadata and content."""
-    file_path = vault.create_note(name, metadata=metadata, content=content)
-    return f"Created note: {file_path.name}"
+    """Create a new note with optional metadata, content and folder."""
+    full_name = f"{folder}/{name}" if folder else name
+    file_path = vault.create_note(full_name, metadata=metadata, content=content)
+    return f"Created note: {file_path.relative_to(vault.path)}"
 
 
 @tool
@@ -47,7 +46,9 @@ def update_note_tool(
     content: str | None = None,
     append: bool = True,
     metadata: dict | None = None,
+    folder: str | None = None,
 ) -> str:
-    """Update an existing note: append/prepend content and merge metadata."""
-    vault.update_note(name, content=content, append=append, metadata=metadata)
-    return f"Note {name} updated successfully."
+    """Update an existing note: append/prepend content and merge metadata. Accepts optional folder."""
+    full_name = f"{folder}/{name}" if folder else name
+    vault.update_note(full_name, content=content, append=append, metadata=metadata)
+    return f"Note {full_name} updated successfully."
