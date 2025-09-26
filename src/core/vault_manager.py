@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 
@@ -112,6 +112,51 @@ class ObsidianVault:
             raise FileNotFoundError(f"Note '{name}' not found in vault")
 
         safe_write(file_path, yaml_block + content)
+
+    def update_note(
+        self,
+        name: str,
+        content: str | None = None,
+        append: bool = True,
+        metadata: dict | None = None,
+    ) -> None:
+        """Update an existing note without removing its current body.
+
+        - If `content` is provided it will be appended (default) or prepended.
+        - If `metadata` is provided it will be merged into existing frontmatter.
+        - Frontmatter and body are preserved and written atomically.
+
+        Args:
+            name (str): Note name (with or without .md).
+            content (str | None, optional): Text to add to the note body. If None, only metadata is updated.
+            append (bool, optional): If True append after existing body, otherwise prepend.
+            metadata (dict | None, optional): Metadata to merge into existing frontmatter.
+
+        Raises:
+            FileNotFoundError: If the note does not exist in the vault.
+        """
+
+        file_path = self._resolve_path(name)
+        text = file_path.read_text(encoding="utf-8")
+        existing_meta, body = parse_frontmatter(text)
+
+        # Ensure metadata is a dict
+        existing_meta = existing_meta or {}
+        if metadata:
+            # Merge provided metadata into existing, override existing keys
+            existing_meta.update(metadata)
+
+        # If no content provided, just rewrite frontmatter preserving body
+        if content is None:
+            new_body = body
+        else:
+            new_body = (body + content) if append else (content + body)
+
+        yaml_block = (
+            f"---\n{yaml.safe_dump(existing_meta)}---\n\n" if existing_meta else ""
+        )
+
+        safe_write(file_path, yaml_block + new_body)
 
     def build_index(self) -> dict[str, dict[str, Any]]:
         """

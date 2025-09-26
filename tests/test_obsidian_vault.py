@@ -83,3 +83,60 @@ This links to [[OtherNote]] and has #atag
     assert "IndexNote" in index
     assert index["IndexNote"]["links"] == ["OtherNote"]
     assert "atag" in index["IndexNote"]["tags"]
+
+
+def test_update_note_appends_and_merges_metadata(tmp_path):
+    vault = make_vault(tmp_path)
+    content = """---
+title: AppendTest
+---
+
+
+Original body
+"""
+    file = make_note(vault, "AppendNote", content)
+    obsidian = ObsidianVault(vault)
+    obsidian.update_note(
+        "AppendNote",
+        content="\nAppended line\n",
+        append=True,
+        metadata={"tags": ["added"]},
+    )
+
+    text = file.read_text(encoding="utf-8")
+    assert "Original body" in text
+    assert "Appended line" in text
+    assert "tags:" in text
+
+
+def test_update_note_prepends(tmp_path):
+    vault = make_vault(tmp_path)
+    content = "Body line\n"
+    file = make_note(vault, "PrependNote", content)
+    obsidian = ObsidianVault(vault)
+
+    obsidian.update_note("PrependNote", content="Intro line\n", append=False)
+    text = file.read_text(encoding="utf-8")
+    # Prepend should place the new content before existing body
+    assert text.startswith("Intro line\n")
+    assert "Body line" in text
+
+
+def test_update_note_metadata_only(tmp_path):
+    vault = make_vault(tmp_path)
+    content = """---
+author: old
+---
+Body
+"""
+    file = make_note(vault, "MetaOnly", content)
+    obsidian = ObsidianVault(vault)
+
+    obsidian.update_note(
+        "MetaOnly", content=None, metadata={"author": "new", "tags": ["x"]}
+    )
+
+    text = file.read_text(encoding="utf-8")
+    assert "author: new" in text
+    assert "tags:" in text
+    assert "Body" in text
