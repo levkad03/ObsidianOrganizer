@@ -7,7 +7,7 @@ def main():
             "messages": [
                 {
                     "role": "user",
-                    "content": "In SIFT note which is located in Machine Learning folder add new content: 'SIFT is a feature detection algorithm.' and add tag 'ml'.",
+                    "content": "Can you list all my notes?",
                 }
             ]
         }

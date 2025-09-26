@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 
@@ -9,6 +10,8 @@ from src.agent.tools import (
     update_note_tool,
     write_note_tool,
 )
+
+load_dotenv()  # Load environment variables from .env file
 
 llm = ChatOllama(model="qwen3:1.7b", reasoning=True)
 
