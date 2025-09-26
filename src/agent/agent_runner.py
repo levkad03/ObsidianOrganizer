@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
 from src.agent.tools import (
@@ -22,4 +23,6 @@ tools = [
     update_note_tool,
 ]
 
-agent = create_react_agent(model=llm, tools=tools)
+memory = MemorySaver()
+
+agent = create_react_agent(model=llm, tools=tools, checkpointer=memory)

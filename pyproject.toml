@@ -12,6 +12,7 @@ dependencies = [
     "langsmith>=0.4.14",
     "python-dotenv>=1.1.1",
     "pyyaml>=6.0.2",
+    "streamlit>=1.50.0",
 ]
 
 
