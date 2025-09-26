@@ -21,7 +21,7 @@ def read_note_tool(name: str) -> dict:
 
 @tool
 def write_note_tool(name: str, metadata: dict, content: str) -> str:
-    """Update an existing note with new metadata and content."""
+    """Write new metadata and content to an existing note."""
     vault.write_note(name, metadata, content)
     return f"Note {name} updated successfuly."
 
@@ -30,3 +30,24 @@ def write_note_tool(name: str, metadata: dict, content: str) -> str:
 def build_index_tool() -> dict:
     """Build an index of all notes (metadata, links, tags)."""
     return vault.build_index()
+
+
+@tool
+def create_note_tool(
+    name: str, metadata: dict | None = None, content: str | None = ""
+) -> str:
+    """Create a new note with optional metadata and content."""
+    file_path = vault.create_note(name, metadata=metadata, content=content)
+    return f"Created note: {file_path.name}"
+
+
+@tool
+def update_note_tool(
+    name: str,
+    content: str | None = None,
+    append: bool = True,
+    metadata: dict | None = None,
+) -> str:
+    """Update an existing note: append/prepend content and merge metadata."""
+    vault.update_note(name, content=content, append=append, metadata=metadata)
+    return f"Note {name} updated successfully."
