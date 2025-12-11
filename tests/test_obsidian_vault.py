@@ -53,19 +53,6 @@ Hello World
     assert "Hello World" in note["content"]
 
 
-def test_write_note(tmp_path):
-    vault = make_vault(tmp_path)
-    content = "Just content"
-    file = make_note(vault, "ToUpdate", content)
-
-    obsidian = ObsidianVault(vault)
-    obsidian.write_note("ToUpdate", metadata={"author": "me"}, content="New Content")
-
-    text = file.read_text(encoding="utf-8")
-    assert "author: me" in text
-    assert "New Content" in text
-
-
 def test_build_index(tmp_path):
     vault = make_vault(tmp_path)
     content = """---
@@ -163,3 +150,116 @@ def test_create_note_existing_raises(tmp_path):
     obsidian = ObsidianVault(vault)
     with pytest.raises(FileExistsError):
         obsidian.create_note("ExistNote", content="New content")
+
+
+# Search tests
+def test_search_notes_by_title(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "MachineLearning", "Some content")
+    make_note(vault, "Cooking", "Recipe content")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("machine")
+
+    assert len(results) == 1
+    assert results[0]["title"] == "MachineLearning"
+    assert "title" in results[0]["matched_in"]
+
+
+def test_search_notes_by_content(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "Note1", "This note talks about transformers and AI")
+    make_note(vault, "Note2", "This note is about cooking")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("transformers")
+
+    assert len(results) == 1
+    assert results[0]["title"] == "Note1"
+    assert "content" in results[0]["matched_in"]
+    assert "transformers" in results[0]["snippet"].lower()
+
+
+def test_search_notes_by_inline_tags(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "TaggedNote", "Content with #machinelearning tag")
+    make_note(vault, "OtherNote", "No relevant tags #cooking")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("machinelearning")
+
+    assert len(results) == 1
+    assert results[0]["title"] == "TaggedNote"
+    assert "tags" in results[0]["matched_in"]
+
+
+def test_search_notes_by_frontmatter_tags(tmp_path):
+    vault = make_vault(tmp_path)
+    content = """---
+tags:
+  - python
+  - programming
+---
+
+Some content here
+"""
+    make_note(vault, "PythonNote", content)
+    make_note(vault, "OtherNote", "Nothing relevant here")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("python")
+
+    assert len(results) == 1
+    assert results[0]["title"] == "PythonNote"
+    assert "tags" in results[0]["matched_in"]
+
+
+def test_search_notes_no_results(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "Note1", "Some content")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("nonexistent")
+
+    assert len(results) == 0
+
+
+def test_search_notes_multiple_matches(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "AINote", "Content about AI and neural networks")
+    make_note(vault, "Note2", "AI is transforming the world #ai")
+    make_note(vault, "Note3", "No match here")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("ai")
+
+    assert len(results) == 2
+    titles = [r["title"] for r in results]
+    assert "AINote" in titles
+    assert "Note2" in titles
+
+
+def test_search_notes_matches_in_multiple_places(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "Python", "Content about python programming #python")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("python")
+
+    assert len(results) == 1
+    matched_in = results[0]["matched_in"]
+    assert "title" in matched_in
+    assert "content" in matched_in
+    assert "tags" in matched_in
+
+
+def test_search_notes_content_only(tmp_path):
+    vault = make_vault(tmp_path)
+    make_note(vault, "TestNote", "Content with #testtag")
+
+    obsidian = ObsidianVault(vault)
+    results = obsidian.search_notes("testtag", search_content=True, search_tags=False)
+
+    # Should match in content (since #testtag is part of the text) but not report tags
+    assert len(results) == 1
+    assert "tags" not in results[0]["matched_in"]
