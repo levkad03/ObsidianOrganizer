@@ -3,7 +3,7 @@ import uuid
 import streamlit as st
 from langchain_core.messages import HumanMessage
 
-from src.agent.agent_runner import agent
+from src.agent import agent
 
 st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="centered")
 

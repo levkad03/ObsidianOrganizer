@@ -5,11 +5,12 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
 from src.agent.tools import (
+    append_to_note_tool,
     build_index_tool,
     create_note_tool,
     list_notes_tool,
     read_note_tool,
-    update_note_tool,
+    replace_note_content_tool,
 )
 
 load_dotenv()  # Load environment variables from .env file
@@ -23,7 +24,8 @@ tools = [
     read_note_tool,
     build_index_tool,
     create_note_tool,
-    update_note_tool,
+    replace_note_content_tool,
+    append_to_note_tool,
 ]
 
 system_prompt = """You are an Obsidian vault assistant.
