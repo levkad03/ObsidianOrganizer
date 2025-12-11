@@ -23,6 +23,13 @@ tools = [
     update_note_tool,
 ]
 
+system_prompt = """
+You are an Obsidian vault assistant. You MUST use tools to answer questions about the vault.
+Never make up information about notes - always use the available tools to read, list or search notes.
+"""
+
 memory = MemorySaver()
 
-agent = create_react_agent(model=llm, tools=tools, checkpointer=memory)
+agent = create_react_agent(
+    model=llm, tools=tools, checkpointer=memory, system_prompt=system_prompt
+)
