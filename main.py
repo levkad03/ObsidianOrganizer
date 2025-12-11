@@ -1,3 +1,5 @@
+import uuid
+
 import streamlit as st
 from langchain_core.messages import HumanMessage
 
@@ -8,13 +10,16 @@ st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="centered"
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = str(uuid.uuid4())
+
 
 def call_agent(user_text):
     # Try common agent call patterns and fall back to plain text run
-    config = {"configurable": {"thread_id": "my-conversation"}}
+    config = {"configurable": {"thread_id": st.session_state.thread_id}}
     try:
         resp = agent.invoke(
-            {"messages": HumanMessage(content=user_text)}, config=config
+            {"messages": [HumanMessage(content=user_text)]}, config=config
         )
     except Exception as e:
         return f"Agent call failed: {e}"
@@ -36,12 +41,9 @@ st.title("Obsidian Vault - Chat with Agent")
 col1, col2 = st.columns([4, 1])
 with col2:
     if st.button("Reset Conversation"):
-        st.session_state.messages = [
-            {
-                "role": "system",
-                "content": "You are an assistant for an Obsidian vault.",
-            }
-        ]
+        st.session_state.messages = []
+        # Generate new thread_id to reset LangGraph memory
+        st.session_state.thread_id = str(uuid.uuid4())
         st.rerun()
 
 # render chat history

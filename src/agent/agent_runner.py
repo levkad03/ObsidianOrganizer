@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
@@ -13,7 +14,9 @@ from src.agent.tools import (
 
 load_dotenv()  # Load environment variables from .env file
 
-llm = ChatOllama(model="qwen3:1.7b", reasoning=True)
+# llm = ChatOllama(model="qwen3:1.7b", reasoning=True)
+
+llm = ChatGroq(model="llama-3.3-70b-versatile")
 
 tools = [
     list_notes_tool,
