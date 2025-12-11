@@ -35,6 +35,13 @@ IMPORTANT RULES:
 2. NEVER guess or make up note contents - ALWAYS use read_note_tool first
 3. Before answering "I don't know", try list_notes_tool to see available notes
 4. Use build_index_tool to understand vault structure
+
+WHEN CREATING OR UPDATING NOTES:
+5. Write DETAILED, comprehensive content - not just a title or brief description
+6. Include explanations, examples, formulas, and relevant details
+7. Use proper Markdown formatting (headers, lists, code blocks)
+8. Aim for at least 200-500 words when creating educational/informational notes
+9. Structure content with sections using ## headers
 """
 
 memory = MemorySaver()
