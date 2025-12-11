@@ -4,7 +4,7 @@ from langchain.tools import tool
 
 from src.core.vault_manager import ObsidianVault
 
-vault = ObsidianVault(Path("D:\Obsidian Notes\Test Vault"))
+vault = ObsidianVault(Path(r"D:\Obsidian Notes\Test Vault"))
 
 
 @tool
@@ -153,3 +153,29 @@ def append_to_note_tool(
     full_name = f"{folder}/{name}" if folder else name
     vault.update_note(full_name, content=content, append=True, metadata=metadata)
     return f"Content appended to note '{full_name}' successfully."
+
+
+@tool
+def search_notes_tool(query: str) -> str:
+    """Search for notes in the vault by keyword.
+
+    Use this tool to find notes about a specific topic, search for content
+    containing certain words, or look for notes with specific tags.
+
+    Args:
+        query: The keyword or phrase to search for
+    """
+    results = vault.search_notes(query)
+
+    if not results:
+        return f"No notes found matching '{query}'"
+
+    # Format results as a string
+    output = f"Found {len(results)} note(s) matching '{query}':\n\n"
+    for r in results:
+        output += f"- **{r['title']}** ({r['path']})\n"
+        output += f"  Matched in: {', '.join(r['matched_in'])}\n"
+        if r["snippet"]:
+            output += f"  Snippet: {r['snippet']}\n"
+        output += "\n"
+    return output

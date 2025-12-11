@@ -11,6 +11,7 @@ from src.agent.tools import (
     list_notes_tool,
     read_note_tool,
     replace_note_content_tool,
+    search_notes_tool,
 )
 
 load_dotenv()  # Load environment variables from .env file
@@ -22,6 +23,7 @@ llm = ChatGroq(model="llama-3.3-70b-versatile")
 tools = [
     list_notes_tool,
     read_note_tool,
+    search_notes_tool,
     build_index_tool,
     create_note_tool,
     replace_note_content_tool,

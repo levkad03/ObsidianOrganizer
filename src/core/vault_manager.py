@@ -204,3 +204,70 @@ class ObsidianVault:
                 "tags": tags,
             }
         return index
+
+    def search_notes(
+        self,
+        query: str,
+        search_content: bool = True,
+        search_tags: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Search notes by keyword in content, title, and tags.
+
+        Args:
+            query: The search term (case-insensitive)
+            search_content: Whether to search in note body
+            search_tags: Whether to search in tags
+
+        Returns:
+            List of matching notes with path, title, and matched context
+        """
+
+        query_lower = query.lower()
+        results = []
+
+        for file_path in self.list_notes():
+            text = file_path.read_text(encoding="utf-8")
+            meta, body = parse_frontmatter(text)
+
+            matches = []
+
+            # Search in filename
+            if query_lower in file_path.stem.lower():
+                matches.append("title")
+
+            # Search in content
+            if search_content and query_lower in body.lower():
+                matches.append("content")
+
+            # Search in tags
+            if search_tags:
+                tags = extract_tags(body)
+
+                # Also check frontmatter tags
+                if meta and "tags" in meta:
+                    fm_tags = meta["tags"]
+                    if isinstance(fm_tags, list):
+                        tags.extend(fm_tags)
+
+                if any(query_lower in tag.lower() for tag in tags):
+                    matches.append("tags")
+
+            if matches:
+                # Extract a snippet around the match
+                snippet = ""
+                if "content" in matches:
+                    idx = body.lower().find(query_lower)
+                    start = max(0, idx - 50)
+                    end = min(len(body), idx + len(body) + 50)
+                    snippet = "..." + body[start:end] + "..."
+
+                results.append(
+                    {
+                        "path": str(file_path.relative_to(self.path)),
+                        "title": file_path.stem,
+                        "matched_in": matches,
+                        "snippet": snippet,
+                    }
+                )
+
+        return results
