@@ -48,7 +48,8 @@ def update_note_tool(
     metadata: dict | None = None,
     folder: str | None = None,
 ) -> str:
-    """Update an existing note: append/prepend content and merge metadata. Accepts optional folder."""
+    """Update an existing note: append/prepend content and merge metadata.
+    Accepts optional folder."""
     full_name = f"{folder}/{name}" if folder else name
     vault.update_note(full_name, content=content, append=append, metadata=metadata)
     return f"Note {full_name} updated successfully."

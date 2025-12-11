@@ -1,20 +1,21 @@
 import streamlit as st
+from langchain_core.messages import HumanMessage
 
 from src.agent.agent_runner import agent
 
-st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="wide")
+st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="centered")
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "You are an assistant for an Obsidian vault."}
-    ]
+    st.session_state.messages = []
 
 
-def call_agent(messages, user_text):
+def call_agent(user_text):
     # Try common agent call patterns and fall back to plain text run
     config = {"configurable": {"thread_id": "my-conversation"}}
     try:
-        resp = agent.invoke({"messages": messages}, config=config)
+        resp = agent.invoke(
+            {"messages": HumanMessage(content=user_text)}, config=config
+        )
     except Exception as e:
         return f"Agent call failed: {e}"
 
@@ -65,7 +66,7 @@ if user_input:
     # call agent and display assistant reply
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            assistant_text = call_agent(st.session_state.messages, user_input)
+            assistant_text = call_agent(user_input)
             st.markdown(assistant_text)
 
     st.session_state.messages.append({"role": "assistant", "content": assistant_text})
