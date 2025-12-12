@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,21 @@ from src.core.utils import (
     parse_frontmatter,
     safe_write,
 )
+
+ATTACHMENT_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".pdf",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".webm",
+    ".mov",
+}
 
 
 class ObsidianVault:
@@ -34,6 +50,17 @@ class ObsidianVault:
 
         if not (self.path / ".obsidian").exists():
             raise ValueError("Not a valid obsidian vault")
+
+    def _is_attachment(self, name: str) -> bool:
+        """Check if a link points to a common attachment type.
+
+        Args:
+            name (str): The name of the link.
+
+        Returns:
+            bool: True if the link is an attachment, False otherwise.
+        """
+        return any(name.lower().endswith(ext) for ext in ATTACHMENT_EXTENSIONS)
 
     def list_notes(self) -> list[Path]:
         """
@@ -271,3 +298,188 @@ class ObsidianVault:
                 )
 
         return results
+
+    def get_backlinks(self, note_name: str) -> list[str]:
+        """Find all notes that link to the given name
+
+        Args:
+            note_name (str): The name of the note to find backlinks for.
+
+        Returns:
+            list[str]: A list of note names that link to the given note.
+        """
+
+        index = self.build_index()
+        backlinks = []
+
+        for name, info in index.items():
+            if note_name in info["links"]:
+                backlinks.append(name)
+
+        return backlinks
+
+    def find_orphaned_notes(self) -> list[str]:
+        """Find notes with no incoming or outgoing links in the vault.
+
+        Returns:
+            list[str]: A list of note names that are orphaned.
+        """
+
+        index = self.build_index()
+
+        all_notes = set(index.keys())
+        linked_to = set()  # Notes that receive links
+        has_outlinks = set()  # Notes that have outgoing links
+
+        for name, info in index.items():
+            if info["links"]:
+                has_outlinks.add(name)
+            linked_to.update(info["links"])
+
+        # Orphaned = no outgoing links and no incoming links
+        orphaned = all_notes - has_outlinks - linked_to
+
+        return list(orphaned)
+
+    def find_broken_links(self) -> dict[str, list[str]]:
+        """Find wikilinks pointing to notes that don't exist
+
+        Returns:
+            dict[str, list[str]]: A dictionary where keys are note names and values
+            are lists of broken links in those notes.
+        """
+
+        index = self.build_index()
+
+        all_notes = set(index.keys())
+        broken = {}
+
+        for name, info in index.items():
+            missing = []
+            for link in info["links"]:
+                # Skip if it's an attachment
+                if self._is_attachment(link):
+                    continue
+                # Check if note exists
+                if link not in all_notes:
+                    missing.append(link)
+
+            if missing:
+                broken[name] = missing
+
+        return broken
+
+    def suggest_connections_by_tags(self) -> list[dict]:
+        """Find notes that share tags but aren't linked
+
+        Returns:
+            list[dict]: A list of suggested connections with shared tags.
+        """
+
+        index = self.build_index()
+        suggestions = []
+
+        notes = list(index.items())
+        for i, (name1, info1) in enumerate(notes):
+            tags1 = set(info1["tags"])
+            links1 = set(info1["links"])
+
+            for name2, info2 in notes[i + 1 :]:
+                if name2 in links1 or name1 in info2["links"]:
+                    continue  # Already linked
+
+                tags2 = set(info2["tags"])
+                common_tags = tags1 & tags2
+
+                if common_tags:
+                    suggestions.append(
+                        {
+                            "note1": name1,
+                            "note2": name2,
+                            "common_tags": list(common_tags),
+                            "reason": "shared tags",
+                        }
+                    )
+
+        return suggestions
+
+    def suggest_connections_by_keywords(self, min_overlap: int = 5) -> list[dict]:
+        """Find notes with significant word overlap.
+
+        Args:
+            min_overlap (int, optional): Minimum number of overlapping words to suggest a connection. Defaults to 5.
+
+        Returns:
+            list[dict]: A list of suggested connections with overlapping keywords.
+        """
+
+        index = self.build_index()
+        note_words = {}
+
+        # Extract keywords from each note
+        for file_path in self.list_notes():
+            text = file_path.read_text(encoding="utf-8")
+            _, body = parse_frontmatter(text)
+            # Unicode-aware word extraction (supports accented chars, umlauts, non-Latin scripts)
+            words = set(re.findall(r"\b\w{4,}\b", body.lower(), re.UNICODE))
+            note_words[file_path.stem] = words
+
+        suggestions = []
+        notes = list(note_words.items())
+
+        for i, (name1, words1) in enumerate(notes):
+            links1 = set(index[name1]["links"])
+
+            for name2, words2 in notes[i + 1 :]:
+                if name2 in links1 or name1 in index[name2]["links"]:
+                    continue
+
+                overlap = words1 & words2
+                if len(overlap) >= min_overlap:
+                    suggestions.append(
+                        {
+                            "note1": name1,
+                            "note2": name2,
+                            "shared_words": len(overlap),
+                            "sample_words": list(overlap)[:5],
+                            "reason": "keyword overlap",
+                        }
+                    )
+
+        return suggestions
+
+    def suggest_connections_by_graph(self) -> list[dict]:
+        """Suggest connections based on link patterns."""
+        index = self.build_index()
+        connections = {}  # {(note1, note2): [via1, via2, ...]}
+
+        for name, info in index.items():
+            direct_links = set(info["links"])
+
+            for linked_note in direct_links:
+                if self._is_attachment(linked_note):
+                    continue
+
+                if linked_note in index:
+                    second_degree = set(index[linked_note]["links"])
+                    potential = second_degree - direct_links - {name}
+
+                    for target in potential:
+                        if self._is_attachment(target):
+                            continue
+
+                        pair = (name, target)
+                        if pair not in connections:
+                            connections[pair] = []
+                        connections[pair].append(linked_note)
+
+        # Convert to list format
+        return [
+            {
+                "note1": pair[0],
+                "note2": pair[1],
+                "via": via_list,  # Now a list of all connecting notes
+                "reason": f"connected via {len(via_list)} note(s)",
+            }
+            for pair, via_list in connections.items()
+        ]
