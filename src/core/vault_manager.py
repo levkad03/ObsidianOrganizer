@@ -12,6 +12,21 @@ from src.core.utils import (
     safe_write,
 )
 
+ATTACHMENT_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".pdf",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".webm",
+    ".mov",
+}
+
 
 class ObsidianVault:
     """
@@ -36,6 +51,17 @@ class ObsidianVault:
 
         if not (self.path / ".obsidian").exists():
             raise ValueError("Not a valid obsidian vault")
+
+    def _is_attachment(self, name: str) -> bool:
+        """Check if a link points to a common attachment type.
+
+        Args:
+            name (str): The name of the link.
+
+        Returns:
+            bool: True if the link is an attachment, False otherwise.
+        """
+        return any(name.lower().endswith(ext) for ext in ATTACHMENT_EXTENSIONS)
 
     def list_notes(self) -> list[Path]:
         """
@@ -330,27 +356,11 @@ class ObsidianVault:
         all_notes = set(index.keys())
         broken = {}
 
-        # Common attachment extensions to ignore
-        attachment_extensions = {
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".svg",
-            ".webp",
-            ".pdf",
-            ".mp3",
-            ".mp4",
-            ".wav",
-            ".webm",
-            ".mov",
-        }
-
         for name, info in index.items():
             missing = []
             for link in info["links"]:
                 # Skip if it's an attachment
-                if any(link.lower().endswith(ext) for ext in attachment_extensions):
+                if self._is_attachment(link):
                     continue
                 # Check if note exists
                 if link not in all_notes:
@@ -455,6 +465,9 @@ class ObsidianVault:
 
             # Find "friends of friends"
             for linked_note in direct_links:
+                if self._is_attachment(linked_note):
+                    continue
+
                 if linked_note in index:
                     second_degree = set(index[linked_note]["links"])
 
