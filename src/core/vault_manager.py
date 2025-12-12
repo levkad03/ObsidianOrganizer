@@ -420,8 +420,8 @@ class ObsidianVault:
         for file_path in self.list_notes():
             text = file_path.read_text(encoding="utf-8")
             _, body = parse_frontmatter(text)
-            # Simple word extraction (can be improved with stopwords removal)
-            words = set(re.findall(r"\b[a-zA-Z]{4,}\b", body.lower()))
+            # Unicode-aware word extraction (supports accented chars, umlauts, non-Latin scripts)
+            words = set(re.findall(r"\b\w{4,}\b", body.lower(), re.UNICODE))
             note_words[file_path.stem] = words
 
         suggestions = []
