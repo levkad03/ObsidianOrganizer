@@ -475,6 +475,9 @@ class ObsidianVault:
                     potential = second_degree - direct_links - {name}
 
                     for target in potential:
+                        if self._is_attachment(target):
+                            continue  # Skip attachments as targets
+
                         suggestions.append(
                             {
                                 "note1": name,

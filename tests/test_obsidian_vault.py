@@ -308,3 +308,156 @@ def test_find_broken_links(tmp_path):
     assert "BrokenNote" in broken_links
     assert broken_links["BrokenNote"] == ["MissingNote"]
     assert "GoodNote" not in broken_links
+
+
+def test_find_broken_links_ignores_attachments(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteWithImage", "Has image [[image.png]] and broken [[Missing]]")
+
+    obsidian = ObsidianVault(vault)
+    broken_links = obsidian.find_broken_links()
+
+    assert "NoteWithImage" in broken_links
+    assert "Missing" in broken_links["NoteWithImage"]
+    assert "image.png" not in broken_links["NoteWithImage"]
+
+
+# Connection suggestion tests
+def test_suggest_connections_by_tags_finds_shared_tags(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteA", "Content #python #programming")
+    make_note(vault, "NoteB", "Content #python #web")
+    make_note(vault, "NoteC", "Content #cooking")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_tags()
+
+    # NoteA and NoteB share #python tag
+    note_pairs = [(s["note1"], s["note2"]) for s in suggestions]
+    assert ("NoteA", "NoteB") in note_pairs or ("NoteB", "NoteA") in note_pairs
+
+    # NoteC has no shared tags with others
+    for s in suggestions:
+        assert "NoteC" not in (s["note1"], s["note2"])
+
+
+def test_suggest_connections_by_tags_ignores_already_linked(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteA", "Links to [[NoteB]] #python")
+    make_note(vault, "NoteB", "Content #python")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_tags()
+
+    # Should not suggest NoteA ↔ NoteB since they're already linked
+    note_pairs = [(s["note1"], s["note2"]) for s in suggestions]
+    assert ("NoteA", "NoteB") not in note_pairs
+    assert ("NoteB", "NoteA") not in note_pairs
+
+
+def test_suggest_connections_by_tags_no_suggestions(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteA", "Content #python")
+    make_note(vault, "NoteB", "Content #cooking")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_tags()
+
+    assert len(suggestions) == 0
+
+
+def test_suggest_connections_by_keywords_finds_overlap(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(
+        vault,
+        "NoteA",
+        "This note discusses machine learning algorithms and neural networks deeply",
+    )
+    make_note(
+        vault,
+        "NoteB",
+        "Neural networks and machine learning are fascinating algorithms for AI",
+    )
+    make_note(vault, "NoteC", "Cooking recipes and food preparation tips")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_keywords(min_overlap=3)
+
+    # NoteA and NoteB share keywords
+    note_pairs = [(s["note1"], s["note2"]) for s in suggestions]
+    assert ("NoteA", "NoteB") in note_pairs or ("NoteB", "NoteA") in note_pairs
+
+
+def test_suggest_connections_by_keywords_ignores_already_linked(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(
+        vault, "NoteA", "Machine learning algorithms [[NoteB]] neural networks deep"
+    )
+    make_note(vault, "NoteB", "Neural networks machine learning algorithms deep")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_keywords(min_overlap=3)
+
+    note_pairs = [(s["note1"], s["note2"]) for s in suggestions]
+    assert ("NoteA", "NoteB") not in note_pairs
+    assert ("NoteB", "NoteA") not in note_pairs
+
+
+def test_suggest_connections_by_graph_finds_second_degree(tmp_path):
+    vault = make_vault(tmp_path)
+
+    # A -> B -> C (A and C are connected via B)
+    make_note(vault, "NoteA", "Links to [[NoteB]]")
+    make_note(vault, "NoteB", "Links to [[NoteC]]")
+    make_note(vault, "NoteC", "End note")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_graph()
+
+    # Should suggest NoteA -> NoteC via NoteB
+    found = False
+    for s in suggestions:
+        if s["note1"] == "NoteA" and s["note2"] == "NoteC" and s["via"] == "NoteB":
+            found = True
+            break
+    assert found, "Should suggest NoteA -> NoteC via NoteB"
+
+
+def test_suggest_connections_by_graph_ignores_direct_links(tmp_path):
+    vault = make_vault(tmp_path)
+
+    # A -> B, A -> C, B -> C
+    make_note(vault, "NoteA", "Links to [[NoteB]] and [[NoteC]]")
+    make_note(vault, "NoteB", "Links to [[NoteC]]")
+    make_note(vault, "NoteC", "End note")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_graph()
+
+    # Should NOT suggest NoteA -> NoteC since they're already linked
+    for s in suggestions:
+        if s["note1"] == "NoteA" and s["note2"] == "NoteC":
+            pytest.fail("Should not suggest already linked notes")
+
+
+def test_suggest_connections_by_graph_ignores_attachments(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteA", "Links to [[NoteB]]")
+    make_note(vault, "NoteB", "Has image [[image.png]] and links to [[NoteC]]")
+    make_note(vault, "NoteC", "End note")
+
+    obsidian = ObsidianVault(vault)
+    suggestions = obsidian.suggest_connections_by_graph()
+
+    # Should not suggest links to attachments
+    for s in suggestions:
+        assert not s["note2"].endswith(".png")
+        assert not s["note2"].endswith(".jpg")
+        assert not s["via"].endswith(".png")
