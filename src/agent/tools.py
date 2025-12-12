@@ -179,3 +179,77 @@ def search_notes_tool(query: str) -> str:
             output += f"  Snippet: {r['snippet']}\n"
         output += "\n"
     return output
+
+
+@tool
+def get_backlinks_tool(note_name: str) -> str:
+    """Find all notes that link to a specific note (backlinks).
+
+    Use this tool when the user wants to:
+    - See what notes reference or link to a specific note
+    - Find backlinks to a note
+    - Understand how a note is connected in the vault
+    - Discover which notes mention a particular topic
+
+    Args:
+        note_name: The name of the note to find backlinks for (without .md extension)
+    """
+    backlinks = vault.get_backlinks(note_name)
+
+    if not backlinks:
+        return f"No notes link to '{note_name}'"
+
+    output = f"Found {len(backlinks)} note(s) linking to '{note_name}':\n\n"
+    for name in backlinks:
+        output += f"- {name}\n"
+    return output
+
+
+@tool
+def find_orphaned_notes_tool() -> str:
+    """Find notes that have no incoming or outgoing links (orphaned notes).
+
+    Use this tool when the user wants to:
+    - Find isolated or disconnected notes in the vault
+    - Clean up notes that aren't linked to anything
+    - Discover forgotten or abandoned notes
+    - Analyze vault connectivity
+
+    Orphaned notes are notes that neither link to other notes nor are linked by other notes.
+    """
+    orphans = vault.find_orphaned_notes()
+
+    if not orphans:
+        return "No orphaned notes found. All notes are connected!"
+
+    output = f"Found {len(orphans)} orphaned note(s) with no links:\n\n"
+    for name in orphans:
+        output += f"- {name}\n"
+    return output
+
+
+@tool
+def find_broken_links_tool() -> str:
+    """Find wikilinks that point to notes that don't exist (broken links).
+
+    Use this tool when the user wants to:
+    - Find broken or invalid links in the vault
+    - Identify notes that reference non-existent notes
+    - Clean up the vault by fixing or removing broken links
+    - Discover notes that need to be created
+
+    Returns notes containing broken links and which links are broken.
+    """
+    broken = vault.find_broken_links()
+
+    if not broken:
+        return "No broken links found. All wikilinks point to existing notes!"
+
+    total_broken = sum(len(links) for links in broken.values())
+    output = f"Found {total_broken} broken link(s) in {len(broken)} note(s):\n\n"
+    for note_name, missing_links in broken.items():
+        output += f"**{note_name}** has broken links to:\n"
+        for link in missing_links:
+            output += f"  - [[{link}]]\n"
+        output += "\n"
+    return output
