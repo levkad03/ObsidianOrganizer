@@ -15,6 +15,9 @@ from src.agent.tools import (
     read_note_tool,
     replace_note_content_tool,
     search_notes_tool,
+    suggest_connections_by_graph_tool,
+    suggest_connections_by_keywords_tool,
+    suggest_connections_by_tags_tool,
 )
 
 load_dotenv()  # Load environment variables from .env file
@@ -34,6 +37,9 @@ tools = [
     create_note_tool,
     replace_note_content_tool,
     append_to_note_tool,
+    suggest_connections_by_tags_tool,
+    suggest_connections_by_keywords_tool,
+    suggest_connections_by_graph_tool,
 ]
 
 system_prompt = """You are an Obsidian vault assistant.

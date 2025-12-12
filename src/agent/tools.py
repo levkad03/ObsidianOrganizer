@@ -253,3 +253,92 @@ def find_broken_links_tool() -> str:
             output += f"  - [[{link}]]\n"
         output += "\n"
     return output
+
+
+@tool
+def suggest_connections_by_tags_tool() -> str:
+    """Suggest potential connections between notes based on shared tags.
+
+    Use this tool when the user wants to:
+    - Find notes that might be related based on tags
+    - Discover potential links between unconnected notes
+    - Improve vault connectivity by finding tag-based relationships
+
+    Returns pairs of notes that share tags but aren't currently linked.
+    """
+
+    suggestions = vault.suggest_connections_by_tags()
+
+    if not suggestions:
+        return "No tag-based connection suggestions found. Notes with shared tags are already linked!"
+
+    output = (
+        f"Found {len(suggestions)} potential connection(s) based on shared tags:\n\n"
+    )
+
+    for s in suggestions[:20]:  # Limit to top 20
+        output += f"- **{s['note1']}** ↔ **{s['note2']}**\n"
+        output += f"  Shared tags: {', '.join('#' + t for t in s['common_tags'])}\n\n"
+
+    if len(suggestions) > 20:
+        output += f"...and {len(suggestions) - 20} more suggestions.\n"
+
+    return output
+
+
+@tool
+def suggest_connections_by_keywords_tool() -> str:
+    """Suggest potential connections between notes based on shared keywords.
+
+    Use this tool when the user wants to:
+    - Find notes with similar content that aren't linked
+    - Discover related notes based on word overlap
+    - Find notes discussing similar topics
+
+    Returns pairs of notes with significant keyword overlap that aren't currently linked.
+    """
+
+    suggestions = vault.suggest_connections_by_keywords()
+
+    if not suggestions:
+        return "No keyword-based connection suggestions found."
+
+    output = f"Found {len(suggestions)} potential connection(s) based on keyword overlap:\n\n"
+    for s in suggestions[:20]:
+        output += f"- **{s['note1']}** ↔ **{s['note2']}**\n"
+        output += (
+            f"  Shared words ({s['shared_words']}): {', '.join(s['sample_words'])}\n\n"
+        )
+
+    if len(suggestions) > 20:
+        output += f"...and {len(suggestions) - 20} more suggestions.\n"
+
+    return output
+
+
+@tool
+def suggest_connections_by_graph_tool() -> str:
+    """Suggest potential connections based on link patterns (friends of friends).
+
+    Use this tool when the user wants to:
+    - Find notes that are indirectly connected (via a common note)
+    - Discover second-degree connections in the vault
+    - Build a more tightly connected knowledge graph
+
+    If note A links to B, and B links to C, suggests that A might want to link to C.
+    """
+    suggestions = vault.suggest_connections_by_graph()
+
+    if not suggestions:
+        return "No graph-based connection suggestions found."
+
+    output = (
+        f"Found {len(suggestions)} potential connection(s) based on link patterns:\n\n"
+    )
+    for s in suggestions[:20]:  # Limit to top 20
+        output += f"- **{s['note1']}** → **{s['note2']}**\n"
+        output += f"  Both connected via: [[{s['via']}]]\n\n"
+
+    if len(suggestions) > 20:
+        output += f"\n... and {len(suggestions) - 20} more suggestions."
+    return output
