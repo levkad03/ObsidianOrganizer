@@ -340,5 +340,5 @@ def suggest_connections_by_graph_tool() -> str:
         output += f"  Both connected via: [[{s['via']}]]\n\n"
 
     if len(suggestions) > 20:
-        output += f"\n... and {len(suggestions) - 20} more suggestions."
+        output += f"\n...and {len(suggestions) - 20} more suggestions."
     return output
