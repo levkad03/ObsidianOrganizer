@@ -1,3 +1,5 @@
+import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -314,6 +316,7 @@ class ObsidianVault:
 
         return list(orphaned)
 
+    # FIXME: Links to images are considered as broken links
     def find_broken_links(self) -> dict[str, list[str]]:
         """Find wikilinks pointing to notes that don't exist
 
@@ -333,3 +336,115 @@ class ObsidianVault:
                 broken[name] = missing
 
         return broken
+
+    def suggest_connections_by_tags(self) -> list[dict]:
+        """Find notes that share tags but aren't linked
+
+        Returns:
+            list[dict]: A list of suggested connections with shared tags.
+        """
+
+        index = self.build_index()
+        suggestions = []
+
+        notes = list(index.items())
+        for i, (name1, info1) in enumerate(notes):
+            tags1 = set(info1["tags"])
+            links1 = set(info1["links"])
+
+            for name2, info2 in notes[i + 1 :]:
+                if name2 in links1 or name1 in info2["links"]:
+                    continue  # Already linked
+
+                tags2 = set(info2["tags"])
+                common_tags = tags1 & tags2
+
+                if common_tags:
+                    suggestions.append(
+                        {
+                            "note1": name1,
+                            "note2": name2,
+                            "common_tags": list(common_tags),
+                            "reason": "shared tags",
+                        }
+                    )
+
+        return suggestions
+
+    def suggest_connections_by_keywords(self, min_overlap: int = 5) -> list[dict]:
+        """Find notes with significant word overlap.
+
+        Args:
+            min_overlap (int, optional): Minimum number of overlapping words to suggest a connection. Defaults to 5.
+
+        Returns:
+            list[dict]: A list of suggested connections with overlapping keywords.
+        """
+
+        index = self.build_index()
+        note_words = {}
+
+        # Extract keywords from each note
+        for file_path in self.list_notes():
+            text = file_path.read_text(encoding="utf-8")
+            _, body = parse_frontmatter(text)
+            # Simple word extraction (can be improved with stopwords removal)
+            words = set(re.findall(r"\b[a-zA-Z]{4,}\b", body.lower()))
+            note_words[file_path.stem] = words
+
+        suggestions = []
+        notes = list(note_words.items())
+
+        for i, (name1, words1) in enumerate(notes):
+            links1 = set(index[name1]["links"])
+
+            for name2, words2 in notes[i + 1 :]:
+                if name2 in links1 or name1 in index[name2]["links"]:
+                    continue
+
+                overlap = words1 & words2
+                if len(overlap) >= min_overlap:
+                    suggestions.append(
+                        {
+                            "note1": name1,
+                            "note2": name2,
+                            "shared_words": len(overlap),
+                            "sample_words": list(overlap)[:5],
+                            "reason": "keyword overlap",
+                        }
+                    )
+
+        return suggestions
+
+    def suggest_connections_by_graph(self) -> list[dict]:
+        """Suggest connections based on link patterns.
+
+        Returns:
+            list[dict]: List of suggested connections based on graph analysis.
+        """
+
+        index = self.build_index()
+        suggestions = []
+
+        for name, info in index.items():
+            direct_links = set(info["links"])
+
+            # Find "friends of friends"
+            for linked_note in direct_links:
+                if linked_note in index:
+                    second_degree = set(index[linked_note]["links"])
+
+                    # Notes linked by my links, but not by me
+                    potential = second_degree - direct_links - {name}
+
+                    for target in potential:
+                        suggestions.append(
+                            {
+                                "note1": name,
+                                "note2": target,
+                                "via": linked_note,
+                                "reason": f"both connected to {linked_note}",
+                            }
+                        )
+
+        return suggestions
