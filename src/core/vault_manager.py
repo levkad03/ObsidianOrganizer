@@ -272,6 +272,25 @@ class ObsidianVault:
 
         return results
 
+    def get_backlinks(self, note_name: str) -> list[str]:
+        """Find all notes that link to the given name
+
+        Args:
+            note_name (str): The name of the note to find backlinks for.
+
+        Returns:
+            list[str]: A list of note names that link to the given note.
+        """
+
+        index = self.build_index()
+        backlinks = []
+
+        for name, info in index.items():
+            if note_name in info["links"]:
+                backlinks.append(name)
+
+        return backlinks
+
     def find_orphaned_notes(self) -> list[str]:
         """Find notes with no incoming or outgoing links in the vault.
 
