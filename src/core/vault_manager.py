@@ -330,8 +330,32 @@ class ObsidianVault:
         all_notes = set(index.keys())
         broken = {}
 
+        # Common attachment extensions to ignore
+        attachment_extensions = {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".svg",
+            ".webp",
+            ".pdf",
+            ".mp3",
+            ".mp4",
+            ".wav",
+            ".webm",
+            ".mov",
+        }
+
         for name, info in index.items():
-            missing = [link for link in info["links"] if link not in all_notes]
+            missing = []
+            for link in info["links"]:
+                # Skip if it's an attachment
+                if any(link.lower().endswith(ext) for ext in attachment_extensions):
+                    continue
+                # Check if note exists
+                if link not in all_notes:
+                    missing.append(link)
+
             if missing:
                 broken[name] = missing
 
