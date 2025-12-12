@@ -342,7 +342,6 @@ class ObsidianVault:
 
         return list(orphaned)
 
-    # FIXME: Links to images are considered as broken links
     def find_broken_links(self) -> dict[str, list[str]]:
         """Find wikilinks pointing to notes that don't exist
 
