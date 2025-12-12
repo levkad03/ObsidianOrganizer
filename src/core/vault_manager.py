@@ -271,3 +271,46 @@ class ObsidianVault:
                 )
 
         return results
+
+    def find_orphaned_notes(self) -> list[str]:
+        """Find notes with no incoming or outgoing links in the vault.
+
+        Returns:
+            list[str]: A list of note names that are orphaned.
+        """
+
+        index = self.build_index()
+
+        all_notes = set(index.keys())
+        linked_to = set()  # Notes that receive links
+        has_outlinks = set()  # Notes that have outgoing links
+
+        for name, info in index.items():
+            if info["links"]:
+                has_outlinks.add(name)
+            linked_to.update(info["links"])
+
+        # Orphaned = no outgoing links and no incoming links
+        orphaned = all_notes - has_outlinks - linked_to
+
+        return list(orphaned)
+
+    def find_broken_links(self) -> dict[str, list[str]]:
+        """Find wikilinks pointing to notes that don't exist
+
+        Returns:
+            dict[str, list[str]]: A dictionary where keys are note names and values
+            are lists of broken links in those notes.
+        """
+
+        index = self.build_index()
+
+        all_notes = set(index.keys())
+        broken = {}
+
+        for name, info in index.items():
+            missing = [link for link in info["links"] if link not in all_notes]
+            if missing:
+                broken[name] = missing
+
+        return broken
