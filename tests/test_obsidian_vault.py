@@ -263,3 +263,48 @@ def test_search_notes_content_only(tmp_path):
     # Should match in content (since #testtag is part of the text) but not report tags
     assert len(results) == 1
     assert "tags" not in results[0]["matched_in"]
+
+
+def test_get_backlinks(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "NoteA", "Links to [[NoteB]] and [[NoteC]]")
+    make_note(vault, "NoteB", "Links to [[NoteC]]")
+    make_note(vault, "NoteC", "No links here")
+
+    obsidian = ObsidianVault(vault)
+    backlinks_to_c = obsidian.get_backlinks("NoteC")
+    assert len(backlinks_to_c) == 2
+    assert "NoteA" in backlinks_to_c
+    assert "NoteB" in backlinks_to_c
+
+    backlinks_to_b = obsidian.get_backlinks("NoteB")
+    assert len(backlinks_to_b) == 1
+    assert backlinks_to_b[0] == "NoteA"
+
+
+def test_find_orphaned_notes(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "Note1", "Links to [[Note2]]")
+    make_note(vault, "Note2", "No links")
+    make_note(vault, "OrphanNote", "I am orphaned")
+
+    obsidian = ObsidianVault(vault)
+    orphans = obsidian.find_orphaned_notes()
+    assert len(orphans) == 1
+    assert orphans[0] == "OrphanNote"
+
+
+def test_find_broken_links(tmp_path):
+    vault = make_vault(tmp_path)
+
+    make_note(vault, "GoodNote", "Links to [[ExistingNote]]")
+    make_note(vault, "ExistingNote", "This note exists")  # Create the target note
+    make_note(vault, "BrokenNote", "Links to [[MissingNote]]")
+
+    obsidian = ObsidianVault(vault)
+    broken_links = obsidian.find_broken_links()
+    assert "BrokenNote" in broken_links
+    assert broken_links["BrokenNote"] == ["MissingNote"]
+    assert "GoodNote" not in broken_links
