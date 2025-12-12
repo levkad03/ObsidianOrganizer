@@ -423,7 +423,7 @@ def test_suggest_connections_by_graph_finds_second_degree(tmp_path):
     # Should suggest NoteA -> NoteC via NoteB
     found = False
     for s in suggestions:
-        if s["note1"] == "NoteA" and s["note2"] == "NoteC" and s["via"] == "NoteB":
+        if s["note1"] == "NoteA" and s["note2"] == "NoteC" and "NoteB" in s["via"]:
             found = True
             break
     assert found, "Should suggest NoteA -> NoteC via NoteB"
@@ -460,4 +460,6 @@ def test_suggest_connections_by_graph_ignores_attachments(tmp_path):
     for s in suggestions:
         assert not s["note2"].endswith(".png")
         assert not s["note2"].endswith(".jpg")
-        assert not s["via"].endswith(".png")
+        # via is now a list
+        for via_note in s["via"]:
+            assert not via_note.endswith(".png")

@@ -449,40 +449,37 @@ class ObsidianVault:
         return suggestions
 
     def suggest_connections_by_graph(self) -> list[dict]:
-        """Suggest connections based on link patterns.
-
-        Returns:
-            list[dict]: List of suggested connections based on graph analysis.
-        """
-
+        """Suggest connections based on link patterns."""
         index = self.build_index()
-        suggestions = []
+        connections = {}  # {(note1, note2): [via1, via2, ...]}
 
         for name, info in index.items():
             direct_links = set(info["links"])
 
-            # Find "friends of friends"
             for linked_note in direct_links:
                 if self._is_attachment(linked_note):
                     continue
 
                 if linked_note in index:
                     second_degree = set(index[linked_note]["links"])
-
-                    # Notes linked by my links, but not by me
                     potential = second_degree - direct_links - {name}
 
                     for target in potential:
                         if self._is_attachment(target):
-                            continue  # Skip attachments as targets
+                            continue
 
-                        suggestions.append(
-                            {
-                                "note1": name,
-                                "note2": target,
-                                "via": linked_note,
-                                "reason": f"both connected to {linked_note}",
-                            }
-                        )
+                        pair = (name, target)
+                        if pair not in connections:
+                            connections[pair] = []
+                        connections[pair].append(linked_note)
 
-        return suggestions
+        # Convert to list format
+        return [
+            {
+                "note1": pair[0],
+                "note2": pair[1],
+                "via": via_list,  # Now a list of all connecting notes
+                "reason": f"connected via {len(via_list)} note(s)",
+            }
+            for pair, via_list in connections.items()
+        ]

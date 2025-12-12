@@ -337,7 +337,8 @@ def suggest_connections_by_graph_tool() -> str:
     )
     for s in suggestions[:20]:  # Limit to top 20
         output += f"- **{s['note1']}** → **{s['note2']}**\n"
-        output += f"  Both connected via: [[{s['via']}]]\n\n"
+        via_links = ", ".join(f"[[{v}]]" for v in s["via"])
+        output += f"  Connected via: {via_links}\n\n"
 
     if len(suggestions) > 20:
         output += f"\n...and {len(suggestions) - 20} more suggestions."
