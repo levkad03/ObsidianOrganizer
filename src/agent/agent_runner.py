@@ -24,7 +24,7 @@ load_dotenv()  # Load environment variables from .env file
 
 # llm = ChatOllama(model="qwen3:1.7b", reasoning=True)
 
-llm = ChatGroq(model="llama-3.3-70b-versatile")
+llm = ChatGroq(model="openai/gpt-oss-20b")
 
 tools = [
     list_notes_tool,

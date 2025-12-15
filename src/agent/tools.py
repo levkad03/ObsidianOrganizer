@@ -25,7 +25,7 @@ def list_notes_tool() -> list[str]:
 
 
 @tool
-def read_note_tool(name: str, folder: str | None = None) -> dict:
+def read_note_tool(name: str) -> dict:
     """Read and retrieve the full content of a specific note from the vault.
 
     Use this tool when the user wants to:
@@ -38,15 +38,13 @@ def read_note_tool(name: str, folder: str | None = None) -> dict:
     Never guess or make up note contents.
 
     Args:
-        name: The note filename (with or without .md extension)
-        folder: Optional folder path where the note is located (e.g., "Machine Learning")
+        name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/Neural Networks")
 
     Returns a dictionary with:
     - "metadata": Parsed YAML frontmatter (tags, dates, etc.)
     - "content": The full text content of the note
     """
-    full_name = f"{folder}/{name}" if folder else name
-    return vault.read_note(full_name)
+    return vault.read_note(name)
 
 
 @tool
@@ -70,12 +68,7 @@ def build_index_tool() -> dict:
 
 
 @tool
-def create_note_tool(
-    name: str,
-    metadata: dict | None = None,
-    content: str | None = "",
-    folder: str | None = None,
-) -> str:
+def create_note_tool(name: str, content: str) -> str:
     """Create a new note in the Obsidian vault.
 
     Use this tool when the user wants to:
@@ -88,23 +81,15 @@ def create_note_tool(
     Creates parent folders automatically if they don't exist.
 
     Args:
-        name: The note filename (with or without .md extension)
-        metadata: Optional YAML frontmatter as a dictionary (e.g., {"tags": ["ai", "ml"], "date": "2024-01-01"})
+        name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/NewNote")
         content: The text content to write in the note body
-        folder: Optional folder to create the note in (e.g., "Machine Learning" or "Projects/2024")
     """
-    full_name = f"{folder}/{name}" if folder else name
-    file_path = vault.create_note(full_name, metadata=metadata, content=content)
+    file_path = vault.create_note(name, content=content)
     return f"Created note: {file_path.relative_to(vault.path)}"
 
 
 @tool
-def replace_note_content_tool(
-    name: str,
-    content: str,
-    metadata: dict | None = None,
-    folder: str | None = None,
-) -> str:
+def replace_note_content_tool(name: str, content: str) -> str:
     """Replace the entire content of an existing note with new content.
 
     Use this tool when the user wants to:
@@ -114,26 +99,17 @@ def replace_note_content_tool(
     - Fix or correct a note by rewriting it
 
     This will DELETE all existing content and write the new content.
-    Existing metadata will be preserved unless new metadata is provided.
 
     Args:
-        name: The note filename (with or without .md extension)
+        name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/HOG")
         content: The new content that will replace everything in the note
-        metadata: Optional new frontmatter metadata (merges with existing)
-        folder: Optional folder path where the note is located (e.g., "Machine Learning")
     """
-    full_name = f"{folder}/{name}" if folder else name
-    vault.update_note(full_name, content=content, append=False, metadata=metadata)
-    return f"Note '{full_name}' content has been completely replaced."
+    vault.update_note(name, content=content, append=False)
+    return f"Note '{name}' content has been completely replaced."
 
 
 @tool
-def append_to_note_tool(
-    name: str,
-    content: str,
-    metadata: dict | None = None,
-    folder: str | None = None,
-) -> str:
+def append_to_note_tool(name: str, content: str) -> str:
     """Add content to the end of an existing note without removing existing content.
 
     Use this tool when the user wants to:
@@ -145,14 +121,11 @@ def append_to_note_tool(
     This will KEEP all existing content and add new content at the end.
 
     Args:
-        name: The note filename (with or without .md extension)
+        name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/HOG")
         content: The content to add at the end of the note
-        metadata: Optional frontmatter metadata to merge with existing
-        folder: Optional folder path where the note is located (e.g., "Machine Learning")
     """
-    full_name = f"{folder}/{name}" if folder else name
-    vault.update_note(full_name, content=content, append=True, metadata=metadata)
-    return f"Content appended to note '{full_name}' successfully."
+    vault.update_note(name, content=content, append=True)
+    return f"Content appended to note '{name}' successfully."
 
 
 @tool
