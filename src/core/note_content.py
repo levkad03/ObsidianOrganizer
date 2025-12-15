@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from .utils import extract_tags, extract_wikilinks, parse_frontmatter
+from src.core.utils import extract_tags, extract_wikilinks, parse_frontmatter
 
 
 class NoteContent:

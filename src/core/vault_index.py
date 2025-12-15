@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from .note_content import NoteContent
+from src.core.note_content import NoteContent
 
 
 class VaultIndex:
