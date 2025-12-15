@@ -1,4 +1,3 @@
-import os
 import uuid
 
 import streamlit as st
@@ -10,7 +9,7 @@ from src.agent import agent
 
 st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="centered")
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 
 @st.cache_resource
