@@ -4,12 +4,12 @@ from typing import Any
 
 import yaml
 
-from core.note_content import NoteContent
-from core.vault_index import VaultIndex
+from src.core.note_content import NoteContent
 from src.core.utils import (
     parse_frontmatter,
     safe_write,
 )
+from src.core.vault_index import VaultIndex
 
 ATTACHMENT_EXTENSIONS = {
     ".png",
