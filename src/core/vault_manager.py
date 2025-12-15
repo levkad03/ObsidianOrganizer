@@ -4,9 +4,9 @@ from typing import Any
 
 import yaml
 
+from core.note_content import NoteContent
+from core.vault_index import VaultIndex
 from src.core.utils import (
-    extract_tags,
-    extract_wikilinks,
     parse_frontmatter,
     safe_write,
 )
@@ -51,24 +51,15 @@ class ObsidianVault:
         if not (self.path / ".obsidian").exists():
             raise ValueError("Not a valid obsidian vault")
 
-    def _is_attachment(self, name: str) -> bool:
-        """Check if a link points to a common attachment type.
+        self._index = VaultIndex(self.path)
 
-        Args:
-            name (str): The name of the link.
-
-        Returns:
-            bool: True if the link is an attachment, False otherwise.
-        """
+    @staticmethod
+    def _is_attachment(name: str) -> bool:
+        """Check if a link points to a common attachment type."""
         return any(name.lower().endswith(ext) for ext in ATTACHMENT_EXTENSIONS)
 
     def list_notes(self) -> list[Path]:
-        """
-        List all markdown notes in the vault.
-
-        Returns:
-            list[Path]: A list of paths to all `.md` files within the vault.
-        """
+        """List all markdown notes in the vault."""
         return list(self.path.glob("**/*.md"))
 
     def _resolve_path(self, name: str) -> Path:
@@ -129,7 +120,7 @@ class ObsidianVault:
 
         Args:
             name (str): Note name (with or without .md).
-            metadata (dict | None, optional): Metadata to include as YAML frontmatter. Defaults to None.
+            metadata (dict | None, optional): Metadata to include as YAML frontmatter.
             content (str, optional): Body text of the note. Defaults to "".
 
         Returns:
@@ -138,17 +129,19 @@ class ObsidianVault:
         Raises:
             FileExistsError: If a note with the given name already exists.
         """
-        yaml_block = f"---\n{yaml.safe_dump(metadata)}---\n\n" if metadata else ""
         file_path = self._resolve_path(name)
         if file_path.exists():
             raise FileExistsError(f"Note '{name}' already exists in vault")
 
-        # Ensure parent directories exist for foldered notes
-        parent = file_path.parent
-        if not parent.exists():
-            parent.mkdir(parents=True, exist_ok=True)
+        # Ensure parent directories exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
+        yaml_block = f"---\n{yaml.safe_dump(metadata)}---\n\n" if metadata else ""
         safe_write(file_path, yaml_block + content)
+
+        # Invalidate index cache
+        self._index.invalidate()
+
         return file_path
 
     def update_note(
@@ -175,20 +168,16 @@ class ObsidianVault:
         """
 
         file_path = self._resolve_path(name)
-
         if not file_path.exists():
             raise FileNotFoundError(f"Note '{name}' not found in vault")
 
         text = file_path.read_text(encoding="utf-8")
         existing_meta, body = parse_frontmatter(text)
-
-        # Ensure metadata is a dict
         existing_meta = existing_meta or {}
+
         if metadata:
-            # Merge provided metadata into existing, override existing keys
             existing_meta.update(metadata)
 
-        # If no content provided, just rewrite frontmatter preserving body
         if content is None:
             new_body = body
         else:
@@ -197,10 +186,12 @@ class ObsidianVault:
         yaml_block = (
             f"---\n{yaml.safe_dump(existing_meta)}---\n\n" if existing_meta else ""
         )
-
         safe_write(file_path, yaml_block + new_body)
 
-    def build_index(self) -> dict[str, dict[str, Any]]:
+        # Invalidate index cache
+        self._index.invalidate()
+
+    def build_index(self, force_rebuild: bool = False) -> dict[str, dict[str, Any]]:
         """
         Build an index of all notes in the vault.
 
@@ -218,19 +209,15 @@ class ObsidianVault:
                     ...
                 }
         """
-        index = {}
-        for file_path in self.list_notes():
-            text = file_path.read_text(encoding="utf-8")
-            meta, body = parse_frontmatter(text)
-            links = extract_wikilinks(body)
-            tags = extract_tags(body)
-            index[file_path.stem] = {
-                "path": str(file_path.relative_to(self.path)),
-                "metadata": meta,
-                "links": links,
-                "tags": tags,
-            }
-        return index
+        if force_rebuild:
+            self._index.invalidate()
+
+        try:
+            return self._index.get()
+        except RuntimeError:
+            # Index not built yet, build it now
+            notes = self.list_notes()
+            return self._index.build(notes)
 
     def search_notes(
         self,
@@ -253,49 +240,42 @@ class ObsidianVault:
         results = []
 
         for file_path in self.list_notes():
-            text = file_path.read_text(encoding="utf-8")
-            meta, body = parse_frontmatter(text)
+            try:
+                text = file_path.read_text(encoding="utf-8")
+                note = NoteContent(file_path, text)
+                matches = []
 
-            matches = []
+                # Search in filename
+                if query_lower in note.name.lower():
+                    matches.append("title")
 
-            # Search in filename
-            if query_lower in file_path.stem.lower():
-                matches.append("title")
+                # Search in content
+                if search_content and query_lower in note.content.lower():
+                    matches.append("content")
 
-            # Search in content
-            if search_content and query_lower in body.lower():
-                matches.append("content")
-
-            # Search in tags
-            if search_tags:
-                tags = extract_tags(body)
-
-                # Also check frontmatter tags
-                if meta and "tags" in meta:
-                    fm_tags = meta["tags"]
-                    if isinstance(fm_tags, list):
-                        tags.extend(fm_tags)
-
-                if any(query_lower in tag.lower() for tag in tags):
+                # Search in tags
+                if search_tags and any(query_lower in tag.lower() for tag in note.tags):
                     matches.append("tags")
 
-            if matches:
-                # Extract a snippet around the match
-                snippet = ""
-                if "content" in matches:
-                    idx = body.lower().find(query_lower)
-                    start = max(0, idx - 50)
-                    end = min(len(body), idx + len(body) + 50)
-                    snippet = "..." + body[start:end] + "..."
+                if matches:
+                    snippet = ""
+                    if "content" in matches:
+                        idx = note.content.lower().find(query_lower)
+                        start = max(0, idx - 50)
+                        end = min(len(note.content), idx + len(query) + 50)
+                        snippet = "..." + note.content[start:end] + "..."
 
-                results.append(
-                    {
-                        "path": str(file_path.relative_to(self.path)),
-                        "title": file_path.stem,
-                        "matched_in": matches,
-                        "snippet": snippet,
-                    }
-                )
+                    results.append(
+                        {
+                            "path": str(file_path.relative_to(self.path)),
+                            "title": note.name,
+                            "matched_in": matches,
+                            "snippet": snippet,
+                        }
+                    )
+            except Exception as e:
+                print(f"Warning: Failed to search {file_path}: {e}")
+                continue
 
         return results
 
@@ -310,13 +290,7 @@ class ObsidianVault:
         """
 
         index = self.build_index()
-        backlinks = []
-
-        for name, info in index.items():
-            if note_name in info["links"]:
-                backlinks.append(name)
-
-        return backlinks
+        return [name for name, info in index.items() if note_name in info["links"]]
 
     def find_orphaned_notes(self) -> list[str]:
         """Find notes with no incoming or outgoing links in the vault.
@@ -355,14 +329,11 @@ class ObsidianVault:
         broken = {}
 
         for name, info in index.items():
-            missing = []
-            for link in info["links"]:
-                # Skip if it's an attachment
-                if self._is_attachment(link):
-                    continue
-                # Check if note exists
-                if link not in all_notes:
-                    missing.append(link)
+            missing = [
+                link
+                for link in info["links"]
+                if not self._is_attachment(link) and link not in all_notes
+            ]
 
             if missing:
                 broken[name] = missing
@@ -407,7 +378,7 @@ class ObsidianVault:
         """Find notes with significant word overlap.
 
         Args:
-            min_overlap (int, optional): Minimum number of overlapping words to suggest a connection. Defaults to 5.
+            min_overlap (int, optional): Minimum number of overlapping words to suggest a connection.
 
         Returns:
             list[dict]: A list of suggested connections with overlapping keywords.
@@ -418,11 +389,13 @@ class ObsidianVault:
 
         # Extract keywords from each note
         for file_path in self.list_notes():
-            text = file_path.read_text(encoding="utf-8")
-            _, body = parse_frontmatter(text)
-            # Unicode-aware word extraction (supports accented chars, umlauts, non-Latin scripts)
-            words = set(re.findall(r"\b\w{4,}\b", body.lower(), re.UNICODE))
-            note_words[file_path.stem] = words
+            try:
+                text = file_path.read_text(encoding="utf-8")
+                _, body = parse_frontmatter(text)
+                words = set(re.findall(r"\b\w{4,}\b", body.lower(), re.UNICODE))
+                note_words[file_path.stem] = words
+            except Exception:
+                continue
 
         suggestions = []
         notes = list(note_words.items())
@@ -449,7 +422,12 @@ class ObsidianVault:
         return suggestions
 
     def suggest_connections_by_graph(self) -> list[dict]:
-        """Suggest connections based on link patterns."""
+        """
+        Suggest connections based on link patterns (mutual friends).
+
+        Returns:
+            A list of suggested connections via intermediate notes.
+        """
         index = self.build_index()
         connections = {}  # {(note1, note2): [via1, via2, ...]}
 
@@ -457,28 +435,26 @@ class ObsidianVault:
             direct_links = set(info["links"])
 
             for linked_note in direct_links:
-                if self._is_attachment(linked_note):
+                if self._is_attachment(linked_note) or linked_note not in index:
                     continue
 
-                if linked_note in index:
-                    second_degree = set(index[linked_note]["links"])
-                    potential = second_degree - direct_links - {name}
+                second_degree = set(index[linked_note]["links"])
+                potential = second_degree - direct_links - {name}
 
-                    for target in potential:
-                        if self._is_attachment(target):
-                            continue
+                for target in potential:
+                    if self._is_attachment(target):
+                        continue
 
-                        pair = (name, target)
-                        if pair not in connections:
-                            connections[pair] = []
-                        connections[pair].append(linked_note)
+                    pair = tuple(sorted([name, target]))  # Normalize pair order
+                    if pair not in connections:
+                        connections[pair] = []
+                    connections[pair].append(linked_note)
 
-        # Convert to list format
         return [
             {
                 "note1": pair[0],
                 "note2": pair[1],
-                "via": via_list,  # Now a list of all connecting notes
+                "via": via_list,
                 "reason": f"connected via {len(via_list)} note(s)",
             }
             for pair, via_list in connections.items()
