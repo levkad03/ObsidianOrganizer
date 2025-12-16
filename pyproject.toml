@@ -5,6 +5,7 @@ description = "AI agent for organizing Obsidian vaults"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.124.4",
     "langchain>=0.3.27",
     "langchain-community>=0.3.27",
     "langchain-groq>=0.3.8",
@@ -12,9 +13,12 @@ dependencies = [
     "langfuse>=3.10.6",
     "langgraph>=0.6.5",
     "langsmith>=0.4.14",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.1",
     "pyyaml>=6.0.2",
     "streamlit>=1.50.0",
+    "uvicorn>=0.38.0",
 ]
 
 
