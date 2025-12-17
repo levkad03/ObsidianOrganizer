@@ -1,17 +1,11 @@
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-
-from src.api.main import app
-
-client = TestClient(app)
-
 
 class TestSetVaultEndpoint:
     """Tests for the /chat/set-vault endpoint."""
 
     @patch("src.api.routes.chat.set_vault")
-    def test_set_vault_success(self, mock_set_vault):
+    def test_set_vault_success(self, mock_set_vault, client):
         """Test successful vault path configuration."""
 
         request_data = {
@@ -30,7 +24,7 @@ class TestSetVaultEndpoint:
         )
 
     @patch("src.api.routes.chat.set_vault")
-    def test_set_vault_invalid_path(self, mock_set_vault):
+    def test_set_vault_invalid_path(self, mock_set_vault, client):
         """Test vault configuration with invalid path."""
 
         mock_set_vault.side_effect = ValueError("Invalid vault path")
@@ -45,7 +39,7 @@ class TestSetVaultEndpoint:
         assert response.status_code == 400
         assert "Invalid vault path" in response.json()["detail"]
 
-    def test_set_vault_missing_fields(self):
+    def test_set_vault_missing_fields(self, client):
         """Test vault configuration with missing fields."""
 
         request_data = {
