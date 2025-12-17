@@ -3,6 +3,7 @@ import uuid
 
 from fastapi import APIRouter
 from langchain_core.messages import HumanMessage
+from langfuse.langchain import CallbackHandler
 from sse_starlette.sse import EventSourceResponse
 
 from src.agent.agent_runner import agent
@@ -17,7 +18,10 @@ async def chat(request: ChatRequest):
     """Send a message to the agent and get a response."""
     thread_id = request.thread_id or (str(uuid.uuid4()))
 
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "callbacks": [CallbackHandler(update_trace=True)],
+    }
 
     response = agent.invoke(
         {"messages": [HumanMessage(content=request.message)]}, config=config
@@ -34,7 +38,10 @@ async def chat_stream(request: ChatRequest):
     """Stream responses from the agent (for real-time UI)."""
 
     thread_id = request.thread_id or (str(uuid.uuid4()))
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "callbacks": [CallbackHandler(update_trace=True)],
+    }
 
     async def event_generator():
         async for event in agent.astream_events(
