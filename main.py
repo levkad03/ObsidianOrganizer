@@ -1,20 +1,16 @@
+import json
 import uuid
 
+import requests
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage
-from langfuse.langchain import CallbackHandler
 
-from src.agent import agent
+API_URL = "http://localhost:8000"
+
 
 st.set_page_config(page_title="Obsidian Vault Agent — Chat", layout="centered")
 
 load_dotenv()
-
-
-@st.cache_resource
-def get_langfuse_handler():
-    return CallbackHandler(update_trace=True)
 
 
 if "messages" not in st.session_state:
@@ -23,27 +19,33 @@ if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
 
 
-def call_agent(user_text):
-    config = {
-        "configurable": {"thread_id": st.session_state.thread_id},
-        "callbacks": [get_langfuse_handler()],  # Add this line
-    }
+def stream_response(user_text: str):
+    """Stream response from the API using SSE."""
 
     try:
-        resp = agent.invoke(
-            {"messages": [HumanMessage(content=user_text)]}, config=config
+        response = requests.post(
+            f"{API_URL}/chat/stream",
+            json={"message": user_text, "thread_id": st.session_state.thread_id},
+            stream=True,
+            timeout=120,
         )
-    except Exception as e:
-        return f"Agent call failed: {e}"
 
-    if isinstance(resp, dict) and "messages" in resp:
-        last = resp["messages"][-1]
-        return getattr(
-            last,
-            "content",
-            last.get("content") if isinstance(last, dict) else str(last),
-        )
-    return str(resp)
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if line:
+                line = line.decode("utf-8")
+                # Parse SSE format: "event: type" and "data: content"
+                if line.startswith("data:"):
+                    data = line[5:].strip()
+                    if data and data != "[DONE]":
+                        try:
+                            # Data is JSON encoded to preserve whitespace
+                            yield json.loads(data)
+                        except json.JSONDecodeError:
+                            yield data
+    except requests.RequestException as e:
+        yield f"API call failed: {e}"
 
 
 st.title("Obsidian Vault - Chat with Agent")
@@ -56,13 +58,8 @@ with col2:
         st.rerun()
 
 for msg in st.session_state.messages:
-    role = msg.get("role", "user")
-    content = msg.get("content", "")
-    if role == "system":
-        st.markdown(f"*System:* {content}")
-    else:
-        with st.chat_message(role):
-            st.markdown(content)
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
 user_input = st.chat_input("Ask about notes, folders, or update/create actions...")
 if user_input:
@@ -71,8 +68,11 @@ if user_input:
         st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            assistant_text = call_agent(user_input)
-            st.markdown(assistant_text)
+        response_placeholder = st.empty()
+        full_response = ""
 
-    st.session_state.messages.append({"role": "assistant", "content": assistant_text})
+        for chunk in stream_response(user_input):
+            full_response += chunk
+            response_placeholder.markdown(full_response + "▌")
+
+    st.session_state.messages.append({"role": "assistant", "content": full_response})

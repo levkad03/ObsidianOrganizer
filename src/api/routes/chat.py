@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from fastapi import APIRouter
@@ -44,7 +45,8 @@ async def chat_stream(request: ChatRequest):
             if event["event"] == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
                 if hasattr(chunk, "content") and chunk.content:
-                    yield {"event": "message", "data": chunk.content}
+                    # Use JSON to preserve whitespace exactly
+                    yield {"event": "token", "data": json.dumps(chunk.content)}
 
         yield {"event": "done", "data": thread_id}
 
