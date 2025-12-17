@@ -32,18 +32,27 @@ def stream_response(user_text: str):
 
         response.raise_for_status()
 
+        current_event = None
+
         for line in response.iter_lines():
-            if line:
-                line = line.decode("utf-8")
-                # Parse SSE format: "event: type" and "data: content"
-                if line.startswith("data:"):
-                    data = line[5:].strip()
-                    if data and data != "[DONE]":
-                        try:
-                            # Data is JSON encoded to preserve whitespace
-                            yield json.loads(data)
-                        except json.JSONDecodeError:
-                            yield data
+            if not line:
+                continue
+
+            line = line.decode("utf-8")
+
+            if line.startswith("event:"):
+                current_event = line[len("event:") :].strip()
+            elif line.startswith("data:"):
+                data = line[len("data:") :].strip()
+
+                if current_event == "token":
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        yield data
+                elif current_event == "done":
+                    break
+
     except requests.RequestException as e:
         yield f"API call failed: {e}"
 
