@@ -1,16 +1,34 @@
 import json
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from langchain_core.messages import HumanMessage
 from langfuse.langchain import CallbackHandler
 from sse_starlette.sse import EventSourceResponse
 
 from src.agent.agent_runner import agent
+from src.agent.vault_registry import set_vault
 from src.api.schemas.chat_request import ChatRequest
 from src.api.schemas.chat_response import ChatResponse
+from src.api.schemas.set_vault_request import SetVaultRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+@router.post("/set-vault")
+async def set_vault_endpoint(request: SetVaultRequest):
+    """Set the Obsidian vault path for a specific thread."""
+
+    try:
+        set_vault(request.thread_id, request.vault_path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {
+        "status": "ok",
+        "message": "Vault path configured successfully",
+        "thread_id": request.thread_id,
+    }
 
 
 @router.post("/", response_model=ChatResponse)
