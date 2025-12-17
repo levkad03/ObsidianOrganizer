@@ -1,14 +1,11 @@
-from pathlib import Path
-
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 
-from src.core.vault_manager import ObsidianVault
-
-vault = ObsidianVault(Path(r"D:\Obsidian Notes\Test Vault"))
+from src.agent.vault_resolver import resolve_vault
 
 
 @tool
-def list_notes_tool() -> list[str]:
+def list_notes_tool(config: RunnableConfig) -> list[str]:
     """List all note filenames in the Obsidian vault.
 
     Use this tool when the user wants to:
@@ -20,12 +17,13 @@ def list_notes_tool() -> list[str]:
     Returns a list of relative file paths for all markdown (.md) files in the vault,
     including notes in subfolders (e.g., "Machine Learning/Neural Networks.md").
     """
+    vault = resolve_vault(config)
     # Return relative paths for better readability
     return [str(p.relative_to(vault.path)) for p in vault.list_notes()]
 
 
 @tool
-def read_note_tool(name: str) -> dict:
+def read_note_tool(name: str, config: RunnableConfig) -> dict:
     """Read and retrieve the full content of a specific note from the vault.
 
     Use this tool when the user wants to:
@@ -44,11 +42,12 @@ def read_note_tool(name: str) -> dict:
     - "metadata": Parsed YAML frontmatter (tags, dates, etc.)
     - "content": The full text content of the note
     """
+    vault = resolve_vault(config)
     return vault.read_note(name)
 
 
 @tool
-def build_index_tool() -> dict:
+def build_index_tool(config: RunnableConfig) -> dict:
     """Build a comprehensive index of all notes in the vault with their metadata, links, and tags.
 
     Use this tool when the user wants to:
@@ -64,11 +63,12 @@ def build_index_tool() -> dict:
     - "links": List of other notes this note links to (wikilinks)
     - "tags": List of tags used in the note
     """
+    vault = resolve_vault(config)
     return vault.build_index()
 
 
 @tool
-def create_note_tool(name: str, content: str) -> str:
+def create_note_tool(name: str, content: str, config: RunnableConfig) -> str:
     """Create a new note in the Obsidian vault.
 
     Use this tool when the user wants to:
@@ -84,12 +84,13 @@ def create_note_tool(name: str, content: str) -> str:
         name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/NewNote")
         content: The text content to write in the note body
     """
+    vault = resolve_vault(config)
     file_path = vault.create_note(name, content=content)
     return f"Created note: {file_path.relative_to(vault.path)}"
 
 
 @tool
-def replace_note_content_tool(name: str, content: str) -> str:
+def replace_note_content_tool(name: str, content: str, config: RunnableConfig) -> str:
     """Replace the entire content of an existing note with new content.
 
     Use this tool when the user wants to:
@@ -104,12 +105,13 @@ def replace_note_content_tool(name: str, content: str) -> str:
         name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/HOG")
         content: The new content that will replace everything in the note
     """
+    vault = resolve_vault(config)
     vault.update_note(name, content=content, append=False)
     return f"Note '{name}' content has been completely replaced."
 
 
 @tool
-def append_to_note_tool(name: str, content: str) -> str:
+def append_to_note_tool(name: str, content: str, config: RunnableConfig) -> str:
     """Add content to the end of an existing note without removing existing content.
 
     Use this tool when the user wants to:
@@ -124,12 +126,13 @@ def append_to_note_tool(name: str, content: str) -> str:
         name: The note path including folder if needed (e.g., "MyNote" or "Machine Learning/HOG")
         content: The content to add at the end of the note
     """
+    vault = resolve_vault(config)
     vault.update_note(name, content=content, append=True)
     return f"Content appended to note '{name}' successfully."
 
 
 @tool
-def search_notes_tool(query: str) -> str:
+def search_notes_tool(query: str, config: RunnableConfig) -> str:
     """Search for notes in the vault by keyword.
 
     Use this tool to find notes about a specific topic, search for content
@@ -138,6 +141,7 @@ def search_notes_tool(query: str) -> str:
     Args:
         query: The keyword or phrase to search for
     """
+    vault = resolve_vault(config)
     results = vault.search_notes(query)
 
     if not results:
@@ -155,7 +159,7 @@ def search_notes_tool(query: str) -> str:
 
 
 @tool
-def get_backlinks_tool(note_name: str) -> str:
+def get_backlinks_tool(note_name: str, config: RunnableConfig) -> str:
     """Find all notes that link to a specific note (backlinks).
 
     Use this tool when the user wants to:
@@ -167,6 +171,7 @@ def get_backlinks_tool(note_name: str) -> str:
     Args:
         note_name: The name of the note to find backlinks for (without .md extension)
     """
+    vault = resolve_vault(config)
     backlinks = vault.get_backlinks(note_name)
 
     if not backlinks:
@@ -179,7 +184,7 @@ def get_backlinks_tool(note_name: str) -> str:
 
 
 @tool
-def find_orphaned_notes_tool() -> str:
+def find_orphaned_notes_tool(config: RunnableConfig) -> str:
     """Find notes that have no incoming or outgoing links (orphaned notes).
 
     Use this tool when the user wants to:
@@ -190,6 +195,7 @@ def find_orphaned_notes_tool() -> str:
 
     Orphaned notes are notes that neither link to other notes nor are linked by other notes.
     """
+    vault = resolve_vault(config)
     orphans = vault.find_orphaned_notes()
 
     if not orphans:
@@ -202,7 +208,7 @@ def find_orphaned_notes_tool() -> str:
 
 
 @tool
-def find_broken_links_tool() -> str:
+def find_broken_links_tool(config: RunnableConfig) -> str:
     """Find wikilinks that point to notes that don't exist (broken links).
 
     Use this tool when the user wants to:
@@ -213,6 +219,7 @@ def find_broken_links_tool() -> str:
 
     Returns notes containing broken links and which links are broken.
     """
+    vault = resolve_vault(config)
     broken = vault.find_broken_links()
 
     if not broken:
@@ -229,7 +236,7 @@ def find_broken_links_tool() -> str:
 
 
 @tool
-def suggest_connections_by_tags_tool() -> str:
+def suggest_connections_by_tags_tool(config: RunnableConfig) -> str:
     """Suggest potential connections between notes based on shared tags.
 
     Use this tool when the user wants to:
@@ -239,7 +246,7 @@ def suggest_connections_by_tags_tool() -> str:
 
     Returns pairs of notes that share tags but aren't currently linked.
     """
-
+    vault = resolve_vault(config)
     suggestions = vault.suggest_connections_by_tags()
 
     if not suggestions:
@@ -260,7 +267,7 @@ def suggest_connections_by_tags_tool() -> str:
 
 
 @tool
-def suggest_connections_by_keywords_tool() -> str:
+def suggest_connections_by_keywords_tool(config: RunnableConfig) -> str:
     """Suggest potential connections between notes based on shared keywords.
 
     Use this tool when the user wants to:
@@ -270,7 +277,7 @@ def suggest_connections_by_keywords_tool() -> str:
 
     Returns pairs of notes with significant keyword overlap that aren't currently linked.
     """
-
+    vault = resolve_vault(config)
     suggestions = vault.suggest_connections_by_keywords()
 
     if not suggestions:
@@ -290,7 +297,7 @@ def suggest_connections_by_keywords_tool() -> str:
 
 
 @tool
-def suggest_connections_by_graph_tool() -> str:
+def suggest_connections_by_graph_tool(config: RunnableConfig) -> str:
     """Suggest potential connections based on link patterns (friends of friends).
 
     Use this tool when the user wants to:
@@ -300,6 +307,7 @@ def suggest_connections_by_graph_tool() -> str:
 
     If note A links to B, and B links to C, suggests that A might want to link to C.
     """
+    vault = resolve_vault(config)
     suggestions = vault.suggest_connections_by_graph()
 
     if not suggestions:
