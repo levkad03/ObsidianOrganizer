@@ -17,6 +17,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
+if "vault_path" not in st.session_state:
+    st.session_state.vault_path = ""
+if "vault_configured" not in st.session_state:
+    st.session_state.vault_configured = False
 
 
 def stream_response(user_text: str):
@@ -59,18 +63,59 @@ def stream_response(user_text: str):
 
 st.title("Obsidian Vault - Chat with Agent")
 
+with st.expander("🔧 Configure Obsidian Vault", expanded=True):
+    vault_path = st.text_input(
+        "Obsidian Vault Path",
+        value=st.session_state.vault_path,
+        placeholder="Enter the path to your Obsidian vault (e.g., /path/to/vault)",
+    )
+
+    col_set, col_status = st.columns([1, 3])
+
+    with col_set:
+        if st.button("Set vault"):
+            try:
+                resp = requests.post(
+                    f"{API_URL}/chat/set-vault",
+                    json={
+                        "thread_id": st.session_state.thread_id,
+                        "vault_path": vault_path,
+                    },
+                    timeout=10,
+                )
+                resp.raise_for_status()
+                st.session_state.vault_path = vault_path
+                st.session_state.vault_configured = True
+                st.success("Vault configured successfully!")
+            except requests.RequestException as e:
+                st.session_state.vault_configured = False
+                st.error(f"Failed to configure vault: {e}")
+
+    with col_status:
+        if st.session_state.vault_configured:
+            st.success(f"Vault is set: {st.session_state.vault_path}")
+        else:
+            st.info("Vault is not configured.")
+
 col1, col2 = st.columns([4, 1])
 with col2:
     if st.button("Reset Conversation"):
         st.session_state.messages = []
         st.session_state.thread_id = str(uuid.uuid4())
+        st.session_state.vault_configured = False
+        st.session_state.vault_path = ""
         st.rerun()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-user_input = st.chat_input("Ask about notes, folders, or update/create actions...")
+if not st.session_state.vault_configured:
+    st.info("Please configure your Obsidian vault path before chatting.")
+    user_input = None
+else:
+    user_input = st.chat_input("Ask about notes, folders, or update/create actions...")
+
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
