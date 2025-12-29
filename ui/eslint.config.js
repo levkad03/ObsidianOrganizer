@@ -42,7 +42,12 @@ export default [
     },
     rules: {
       // Prettier integration
-      'prettier/prettier': 'error',
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
 
       // Vue rules
       'vue/multi-word-component-names': 'off',
