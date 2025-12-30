@@ -1,203 +1,81 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
-@plugin '@tailwindcss/typography';
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-@theme inline {
-  --font-sans: 'Rubik', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'OperatorMonoSSmLig-Book', 'JetBrains Mono', monospace;
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
 
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
 
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
 
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
 
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
 
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-/* MAPPING STRATEGY:
-  - Cyan (#0fb6d6/3dd7fb) -> Primary
-  - Pink (#f4569d) -> Accent
-  - Deep Dark (#100e17) -> Background
-  - Lighter Dark (#191621) -> Cards/Sidebar
-*/
-
-:root {
   --radius: 0.5rem;
-
-  /* Fallback Light Mode (Based on commented out section in source) */
-  --background: #fbfbfb;
-  --foreground: #333333;
-  --card: #ffffff;
-  --card-foreground: #333333;
-  --popover: #ffffff;
-  --popover-foreground: #333333;
-  --primary: #0fb6d6; /* Cyan */
-  --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #b2b2b2;
-  --accent: #f4569d; /* Pink */
-  --accent-foreground: #ffffff;
-  --destructive: #db4d52;
-  --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #0fb6d6;
-
-  /* Charts - Light */
-  --chart-1: #0fb6d6;
-  --chart-2: #f4569d;
-  --chart-3: #263d92;
-  --chart-4: #ffc93c;
-  --chart-5: #17b978;
-
-  /* Sidebar - Light */
-  --sidebar: #fbfbfb;
-  --sidebar-foreground: #333333;
-  --sidebar-primary: #0fb6d6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #0fb6d6;
-  --sidebar-border: #e4e4e7;
-  --sidebar-ring: #0fb6d6;
 }
 
-.dark {
-  /* Obsidianite Backgrounds */
-  --background: #100e17; /* --background-primary */
-  --foreground: #bebebe; /* --text-normal */
+/* Force Dark Mode by default */
+:root {
+  /* Obsidian-inspired Dark Theme (Zinc/Slate) */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
 
-  /* Cards & Surface */
-  --card: #191621; /* --background-secondary */
-  --card-foreground: #bebebe;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
 
-  --popover: #0d0b12; /* --background-primary-alt */
-  --popover-foreground: #bebebe;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
 
-  /* Primary (The Cyan Glow) */
-  --primary: #0fb6d6; /* --text-accent */
-  --primary-foreground: #100e17; /* Dark text on neon button */
+  --primary: 263.4 70% 50.4%; /* Obsidian Purple */
+  --primary-foreground: 210 40% 98%;
 
-  /* Secondary (Darker surfaces) */
-  --secondary: #191621;
-  --secondary-foreground: #7aa2f7; /* --text-faint */
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
 
-  /* Muted */
-  --muted: #0d0b12;
-  --muted-foreground: #7aa2f7; /* --text-faint */
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
 
-  /* Accent (The Pink/Magenta) */
-  --accent: #f4569d; /* --text-sub-accent */
-  --accent-foreground: #ffffff;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
 
-  /* Destructive */
-  --destructive: #ff5555; /* Typical Dracula/Obsidian Red */
-  --destructive-foreground: #ffffff;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
 
-  /* Borders & Inputs */
-  --border: rgba(14, 210, 247, 0.15); /* --table-border-color */
-  --input: rgba(14, 210, 247, 0.15);
-  --ring: #0fb6d6;
-
-  /* Charts - Matched to Theme Tags */
-  --chart-1: #0fb6d6; /* Cyan */
-  --chart-2: #f4569d; /* Pink */
-  --chart-3: #50fa7b; /* Green (Dracula/Code style) */
-  --chart-4: #ffb86c; /* Orange */
-  --chart-5: #bd93f9; /* Purple */
-
-  /* Sidebar */
-  --sidebar: #0d0b12; /* --background-secondary-alt */
-  --sidebar-foreground: #bebebe;
-  --sidebar-primary: #0fb6d6;
-  --sidebar-primary-foreground: #100e17;
-  --sidebar-accent: #191621;
-  --sidebar-accent-foreground: #f4569d;
-  --sidebar-border: rgba(14, 210, 247, 0.1); /* Faint cyan border */
-  --sidebar-ring: #0fb6d6;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans;
-    /* Optional: Smooth font rendering for dark mode */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Custom Obsidianite Scrollbar */
-  ::-webkit-scrollbar {
-    width: 0.6rem;
-    height: 0.6rem;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-card;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: var(--border);
-    border-radius: 999px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/30;
-  }
-
-  /* Helper for "Glow" effects used in the theme */
-  .text-glow {
-    text-shadow: 0 0 10px var(--primary);
-  }
-
-  .border-glow {
-    box-shadow: 0 0 5px var(--border);
-  }
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
 }
