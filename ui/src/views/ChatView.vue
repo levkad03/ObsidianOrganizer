@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, ChatRequest } from '@/services/api';
+import DOMPurify from 'dompurify';
+import MarkdownIt from 'markdown-it';
 import { nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -10,6 +12,17 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+const md = new MarkdownIt({
+  html: false, // Disable HTML tags in source for security
+  linkify: true, // Autoconvert URL-like text to links
+  breaks: true, // Convert '\n' in paragraphs into <br>
+});
+
+const renderMarkdown = (content: string) => {
+  const rawHtml = md.render(content);
+  return DOMPurify.sanitize(rawHtml);
+};
 
 const router = useRouter();
 const vaultPath = ref('');
@@ -124,7 +137,10 @@ const changeVault = () => {
             }}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p class="whitespace-pre-wrap">{{ message.content }}</p>
+            <div
+              class="prose prose-sm dark:prose-invert max-w-none break-words"
+              v-html="renderMarkdown(message.content)"
+            ></div>
           </CardContent>
         </Card>
 
