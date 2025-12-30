@@ -54,10 +54,11 @@ const sendMessage = async () => {
   await scrollToBottom();
 
   try {
-    const assistantMessage: Message = {
+    // 1. Push an empty assistant message to the array immediately
+    messages.value.push({
       role: 'assistant',
       content: '',
-    };
+    });
 
     const request: ChatRequest = {
       message: messageToSend,
@@ -65,7 +66,12 @@ const sendMessage = async () => {
     };
 
     for await (const token of api.chatStream(request)) {
-      assistantMessage.content += token;
+      // 2. Access the LAST message in the array (which is now a Reactive Proxy)
+      const lastMessage = messages.value[messages.value.length - 1];
+
+      // 3. Update the reactive property to trigger the UI re-render
+      lastMessage.content += token;
+
       await scrollToBottom();
     }
   } catch (error) {
@@ -74,7 +80,8 @@ const sendMessage = async () => {
       content: `Error: ${error instanceof Error ? error.message : 'Unknown error.'}`,
     };
 
-    if (messages.value[messages.value.length - 1].content === '') {
+    // If the last message is empty (the failed streaming one), replace it
+    if (messages.value[messages.value.length - 1]?.content === '') {
       messages.value[messages.value.length - 1] = errorMessage;
     } else {
       messages.value.push(errorMessage);

@@ -1,36 +1,51 @@
 @import 'tailwindcss';
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: 'Rubik', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'OperatorMonoSSmLig-Book', 'JetBrains Mono', monospace;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -41,80 +56,147 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* MAPPING STRATEGY:
+  - Cyan (#0fb6d6/3dd7fb) -> Primary
+  - Pink (#f4569d) -> Accent
+  - Deep Dark (#100e17) -> Background
+  - Lighter Dark (#191621) -> Cards/Sidebar
+*/
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+
+  /* Fallback Light Mode (Based on commented out section in source) */
+  --background: #fbfbfb;
+  --foreground: #333333;
+  --card: #ffffff;
+  --card-foreground: #333333;
+  --popover: #ffffff;
+  --popover-foreground: #333333;
+  --primary: #0fb6d6; /* Cyan */
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #b2b2b2;
+  --accent: #f4569d; /* Pink */
+  --accent-foreground: #ffffff;
+  --destructive: #db4d52;
+  --destructive-foreground: #ffffff;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #0fb6d6;
+
+  /* Charts - Light */
+  --chart-1: #0fb6d6;
+  --chart-2: #f4569d;
+  --chart-3: #263d92;
+  --chart-4: #ffc93c;
+  --chart-5: #17b978;
+
+  /* Sidebar - Light */
+  --sidebar: #fbfbfb;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #0fb6d6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #0fb6d6;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #0fb6d6;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Obsidianite Backgrounds */
+  --background: #100e17; /* --background-primary */
+  --foreground: #bebebe; /* --text-normal */
+
+  /* Cards & Surface */
+  --card: #191621; /* --background-secondary */
+  --card-foreground: #bebebe;
+
+  --popover: #0d0b12; /* --background-primary-alt */
+  --popover-foreground: #bebebe;
+
+  /* Primary (The Cyan Glow) */
+  --primary: #0fb6d6; /* --text-accent */
+  --primary-foreground: #100e17; /* Dark text on neon button */
+
+  /* Secondary (Darker surfaces) */
+  --secondary: #191621;
+  --secondary-foreground: #7aa2f7; /* --text-faint */
+
+  /* Muted */
+  --muted: #0d0b12;
+  --muted-foreground: #7aa2f7; /* --text-faint */
+
+  /* Accent (The Pink/Magenta) */
+  --accent: #f4569d; /* --text-sub-accent */
+  --accent-foreground: #ffffff;
+
+  /* Destructive */
+  --destructive: #ff5555; /* Typical Dracula/Obsidian Red */
+  --destructive-foreground: #ffffff;
+
+  /* Borders & Inputs */
+  --border: rgba(14, 210, 247, 0.15); /* --table-border-color */
+  --input: rgba(14, 210, 247, 0.15);
+  --ring: #0fb6d6;
+
+  /* Charts - Matched to Theme Tags */
+  --chart-1: #0fb6d6; /* Cyan */
+  --chart-2: #f4569d; /* Pink */
+  --chart-3: #50fa7b; /* Green (Dracula/Code style) */
+  --chart-4: #ffb86c; /* Orange */
+  --chart-5: #bd93f9; /* Purple */
+
+  /* Sidebar */
+  --sidebar: #0d0b12; /* --background-secondary-alt */
+  --sidebar-foreground: #bebebe;
+  --sidebar-primary: #0fb6d6;
+  --sidebar-primary-foreground: #100e17;
+  --sidebar-accent: #191621;
+  --sidebar-accent-foreground: #f4569d;
+  --sidebar-border: rgba(14, 210, 247, 0.1); /* Faint cyan border */
+  --sidebar-ring: #0fb6d6;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    /* Optional: Smooth font rendering for dark mode */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom Obsidianite Scrollbar */
+  ::-webkit-scrollbar {
+    width: 0.6rem;
+    height: 0.6rem;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-card;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/30;
+  }
+
+  /* Helper for "Glow" effects used in the theme */
+  .text-glow {
+    text-shadow: 0 0 10px var(--primary);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 5px var(--border);
   }
 }
