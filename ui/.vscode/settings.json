@@ -1,0 +1,12 @@
+{
+    "typescript.preferences.importModuleSpecifier": "non-relative",
+    "files.eol": "\n",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[vue]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+}
