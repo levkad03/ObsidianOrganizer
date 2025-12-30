@@ -39,7 +39,7 @@ class ApiClient {
 
   async setVault(request: SetVaultRequest): Promise<SetVaultResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/set_vault`, {
+      const response = await fetch(`${this.baseUrl}/chat/set-vault`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,6 +101,7 @@ class ApiClient {
 
       let buffer = '';
       let finalThreadId = request.thread_id || '';
+      let currentEvent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -113,28 +114,26 @@ class ApiClient {
 
         for (const line of lines) {
           if (line.startsWith('event:')) {
-            const event = line.slice(6).trim();
+            currentEvent = line.slice(6).trim();
             continue;
           }
 
           if (line.startsWith('data:')) {
             const data = line.slice(5).trim();
 
-            if (data === '[DONE]') {
-              return finalThreadId;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-              if (typeof parsed === 'string') {
-                yield parsed;
-              } else {
-                finalThreadId = parsed;
+            if (currentEvent === 'token') {
+              try {
+                // The data is JSON-encoded, so parse it
+                const token = JSON.parse(data);
+                yield token;
+              } catch (e) {
+                console.error('Failed to parse token:', data);
               }
-            } catch (e) {
-              // If not JSON, treat as thread_id
+            } else if (currentEvent === 'done') {
               finalThreadId = data;
             }
+
+            currentEvent = ''; // Reset event type
           }
         }
       }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api } from '@/services/api';
-import { open } from '@tauri-apps/api/dialog';
+import { open } from '@tauri-apps/plugin-dialog';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -23,6 +23,9 @@ onMounted(() => {
 });
 
 const selectFolder = async () => {
+  console.log('Browse button clicked'); // Debug log
+  error.value = ''; // Clear previous errors
+
   try {
     const selected = await open({
       directory: true,
@@ -30,13 +33,16 @@ const selectFolder = async () => {
       title: 'Select Obsidian Vault',
     });
 
+    console.log('Selected:', selected); // Debug log
+
     if (selected && typeof selected === 'string') {
       vaultPath.value = selected;
-      error.value = '';
+    } else if (selected === null) {
+      console.log('User cancelled folder selection');
     }
   } catch (err) {
-    error.value = 'Failed to open folder selector';
-    console.error(err);
+    console.error('Dialog error:', err); // Debug log
+    error.value = `Failed to open folder selector: ${err}`;
   }
 };
 
@@ -87,7 +93,6 @@ const validateAndContinue = async () => {
               id="vault-path"
               v-model="vaultPath"
               placeholder="/path/to/your/vault"
-              readonly
               class="flex-1"
             />
             <Button variant="outline" @click="selectFolder">Browse</Button>
