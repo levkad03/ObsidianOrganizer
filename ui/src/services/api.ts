@@ -32,12 +32,28 @@ export interface DashboardSummary {
     untagged_notes: number;
     recent_notes: number;
   };
-  recent_notes: string[];
-  top_hubs: {
+  recent_notes: Array<{
+    name: string;
+    path: string;
+    modified_at: number;
+  }>;
+  top_hubs: Array<{
     note: string;
     backlinks: number;
-  }[];
-  generated_at: string;
+  }>;
+  generated_at: number;
+}
+
+export interface OrphanedNotesResponse {
+  orphaned_notes: string[];
+}
+
+export interface BrokenLinksResponse {
+  [filename: string]: string[];
+}
+
+export interface UntaggedNotesResponse {
+  untagged_notes: string[];
 }
 
 class ApiClient {
@@ -163,22 +179,14 @@ class ApiClient {
     }
   }
 
-  async getDashboardSummary(thread_id: string): Promise<DashboardSummary> {
-    const res = await fetch(`${this.baseUrl}/dashboard/summary?thread_id=${thread_id}`);
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to load dashboard');
+  async getDashboardSummary(threadId: string): Promise<DashboardSummary> {
+    try {
+      const response = await fetch(`${this.baseUrl}/dashboard/summary?thread_id=${threadId}`);
+      if (!response.ok) throw new Error('Failed to fetch dashboard summary');
+      return response.json();
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Unknown error');
     }
-
-    return res.json();
-  }
-  async getOrphanedNotes(thread_id: string): Promise<string[]> {
-    const res = await fetch(`${this.baseUrl}/dashboard/orphaned?thread_id=${thread_id}`);
-
-    const data = await res.json();
-
-    return data.orphaned_notes;
   }
 }
 
