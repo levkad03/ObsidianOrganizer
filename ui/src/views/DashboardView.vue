@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { api, DashboardSummary } from '@/services/api';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+// Using Lucide icons for a cleaner look consistent with the new cards
+import { Activity, FileText, FileWarning, Link as LinkIcon, Tag } from 'lucide-vue-next';
 
 const router = useRouter();
 const loading = ref(true);
 const summary = ref<DashboardSummary | null>(null);
+
+// -- MODAL STATE --
+const isDetailsOpen = ref(false);
+const detailTitle = ref('');
+const detailItems = ref<any[]>([]);
+const loadingDetails = ref(false);
 
 const formatDate = (timestamp: number) => {
   return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -15,6 +30,36 @@ const formatDate = (timestamp: number) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+// -- CLICK HANDLERS --
+const showDetails = async (type: 'broken' | 'orphaned' | 'untagged') => {
+  const threadId = localStorage.getItem('threadId');
+  if (!threadId) return;
+
+  isDetailsOpen.value = true;
+  loadingDetails.value = true;
+  detailItems.value = [];
+
+  try {
+    if (type === 'broken') {
+      detailTitle.value = 'Broken Links';
+      const data = await api.getBrokenLinks(threadId);
+      detailItems.value = data;
+    } else if (type === 'orphaned') {
+      detailTitle.value = 'Orphaned Notes';
+      const data = await api.getOrphanedNotes(threadId);
+      detailItems.value = data.orphaned_notes;
+    } else if (type === 'untagged') {
+      detailTitle.value = 'Untagged Notes';
+      const data = await api.getUntaggedNotes(threadId);
+      detailItems.value = data.untagged_notes;
+    }
+  } catch (e) {
+    console.error('Failed to fetch details', e);
+  } finally {
+    loadingDetails.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -58,17 +103,7 @@ onMounted(async () => {
         <Card class="bg-card/50 backdrop-blur-sm border-primary/20">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">Total Notes</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-muted-foreground"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
+            <FileText class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ summary.stats.total_notes }}</div>
@@ -76,87 +111,64 @@ onMounted(async () => {
         </Card>
 
         <Card
-          v-if="summary.stats.broken_links > 0"
-          class="bg-card/50 backdrop-blur-sm border-destructive/20"
+          :class="[
+            'bg-card/50 backdrop-blur-sm transition-all border-destructive/20 group',
+            summary.stats.broken_links > 0 ? 'cursor-pointer hover:bg-destructive/10' : '',
+          ]"
+          @click="summary.stats.broken_links > 0 && showDetails('broken')"
         >
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium text-destructive">Broken Links</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-destructive"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
+            <LinkIcon class="h-4 w-4 text-destructive group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold text-destructive">{{ summary.stats.broken_links }}</div>
-            <p class="text-xs text-muted-foreground">Across all notes</p>
+            <p v-if="summary.stats.broken_links > 0" class="text-xs text-muted-foreground">
+              Click to view details
+            </p>
+            <p v-else class="text-xs text-muted-foreground">All clear</p>
           </CardContent>
         </Card>
-        <Card v-else class="bg-card/50 backdrop-blur-sm border-yellow-500/20">
+
+        <Card
+          :class="[
+            'bg-card/50 backdrop-blur-sm transition-all border-yellow-500/20 group',
+            summary.stats.orphaned_notes > 0 ? 'cursor-pointer hover:bg-yellow-500/10' : '',
+          ]"
+          @click="summary.stats.orphaned_notes > 0 && showDetails('orphaned')"
+        >
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium text-yellow-500">Orphaned</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-yellow-500"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+            <FileWarning
+              class="h-4 w-4 text-yellow-500 group-hover:scale-110 transition-transform"
+            />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold text-yellow-500">{{ summary.stats.orphaned_notes }}</div>
+            <p v-if="summary.stats.orphaned_notes > 0" class="text-xs text-muted-foreground">
+              Click to view details
+            </p>
+            <p v-else class="text-xs text-muted-foreground">All connected</p>
           </CardContent>
         </Card>
 
-        <Card class="bg-card/50 backdrop-blur-sm border-primary/20">
+        <Card
+          :class="[
+            'bg-card/50 backdrop-blur-sm transition-all border-primary/20 group',
+            summary.stats.untagged_notes > 0 ? 'cursor-pointer hover:bg-primary/10' : '',
+          ]"
+          @click="summary.stats.untagged_notes > 0 && showDetails('untagged')"
+        >
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">Untagged</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-muted-foreground"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
-              />
-              <line x1="7" y1="7" x2="7.01" y2="7" />
-            </svg>
+            <Tag class="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ summary.stats.untagged_notes }}</div>
-          </CardContent>
-        </Card>
-
-        <Card class="bg-card/50 backdrop-blur-sm border-primary/20">
-          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Active This Week</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-muted-foreground"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div class="text-2xl font-bold">{{ summary.stats.recent_notes }}</div>
+            <p v-if="summary.stats.untagged_notes > 0" class="text-xs text-muted-foreground">
+              Click to view details
+            </p>
+            <p v-else class="text-xs text-muted-foreground">All tagged</p>
           </CardContent>
         </Card>
       </div>
@@ -164,7 +176,10 @@ onMounted(async () => {
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card class="col-span-4 bg-card/30 border-border/50">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle class="flex items-center gap-2">
+              <Activity class="h-5 w-5 text-primary" />
+              Recent Activity
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div class="space-y-4">
@@ -177,19 +192,7 @@ onMounted(async () => {
                   <div
                     class="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-                      />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
+                    <FileText class="h-4 w-4" />
                   </div>
                   <div>
                     <p class="text-sm font-medium leading-none">{{ note.name }}</p>
@@ -220,5 +223,44 @@ onMounted(async () => {
         </Card>
       </div>
     </div>
+
+    <Dialog v-model:open="isDetailsOpen">
+      <DialogContent class="sm:max-w-125 max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{{ detailTitle }}</DialogTitle>
+          <DialogDescription>
+            Found {{ detailItems.length }} items that need attention.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="flex-1 overflow-y-auto pr-2 mt-4 space-y-2">
+          <div v-if="loadingDetails" class="flex justify-center py-8">
+            <div
+              class="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"
+            ></div>
+          </div>
+
+          <div v-else-if="detailItems.length === 0" class="text-center text-muted-foreground py-4">
+            No items found.
+          </div>
+
+          <div
+            v-for="(item, idx) in detailItems"
+            v-else
+            :key="idx"
+            class="p-3 rounded-md bg-muted/50 text-sm font-mono break-all border border-border/50 flex items-center gap-3"
+          >
+            <span v-if="typeof item === 'string'">{{ item }}</span>
+
+            <div v-else class="flex flex-col gap-1">
+              <span class="font-semibold text-destructive">{{ item.link || item }}</span>
+              <span v-if="item.source" class="text-xs text-muted-foreground"
+                >in {{ item.source }}</span
+              >
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
