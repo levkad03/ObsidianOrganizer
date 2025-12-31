@@ -45,15 +45,23 @@ const showDetails = async (type: 'broken' | 'orphaned' | 'untagged') => {
     if (type === 'broken') {
       detailTitle.value = 'Broken Links';
       const data = await api.getBrokenLinks(threadId);
-      detailItems.value = data;
+
+      // FIX: Transform Dictionary { "Note.md": ["Link1"] } -> Array [{ source: "Note.md", link: "Link1" }]
+      // This matches your template's check for 'item.source' and 'item.link'
+      detailItems.value = Object.entries(data).flatMap(([source, links]) =>
+        (links as string[]).map((link) => ({
+          source: source,
+          link: link,
+        }))
+      );
     } else if (type === 'orphaned') {
       detailTitle.value = 'Orphaned Notes';
       const data = await api.getOrphanedNotes(threadId);
-      detailItems.value = data.orphaned_notes;
+      detailItems.value = data.orphaned_notes; // This is already an array of strings
     } else if (type === 'untagged') {
       detailTitle.value = 'Untagged Notes';
       const data = await api.getUntaggedNotes(threadId);
-      detailItems.value = data.untagged_notes;
+      detailItems.value = data.untagged_notes; // This is already an array of strings
     }
   } catch (e) {
     console.error('Failed to fetch details', e);
@@ -61,7 +69,6 @@ const showDetails = async (type: 'broken' | 'orphaned' | 'untagged') => {
     loadingDetails.value = false;
   }
 };
-
 onMounted(async () => {
   const threadId = localStorage.getItem('threadId');
   if (!threadId) {

@@ -21,7 +21,7 @@ async def get_dashboard_summary(vault: ObsidianVault = Depends(get_valid_vault))
 
 @router.get("/orphaned")
 async def get_orphaned_notes(vault: ObsidianVault = Depends(get_valid_vault)):
-    return vault.find_orphaned_notes()
+    return {"orphaned_notes": vault.find_orphaned_notes()}
 
 
 @router.get("/broken-links")
