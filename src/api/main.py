@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import chat
+from src.api.routes import chat, dashboard
 
 app = FastAPI(title="Obsidian Organizer API", version="1.0.0")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 )
 
 app.include_router(chat.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")
