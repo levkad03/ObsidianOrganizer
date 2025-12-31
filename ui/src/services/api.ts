@@ -188,6 +188,21 @@ class ApiClient {
       throw new Error(error instanceof Error ? error.message : 'Unknown error');
     }
   }
+
+  async getOrphanedNotes(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/orphaned?thread_id=${threadId}`);
+    return res.json();
+  }
+
+  async getBrokenLinks(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/broken-links?thread_id=${threadId}`);
+    return res.json();
+  }
+
+  async getUntaggedNotes(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/untagged?thread_id=${threadId}`);
+    return res.json();
+  }
 }
 
 export const api = new ApiClient();
