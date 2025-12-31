@@ -1,8 +1,9 @@
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from src.agent.vault_registry import get_vault_path
+from src.api.dependencies import get_valid_vault
 from src.core.vault_manager import ObsidianVault
 from src.services.dashboard_service import DashboardService
 
@@ -10,66 +11,28 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary")
-async def get_dashboard_summary(thread_id: str):
+async def get_dashboard_summary(vault: ObsidianVault = Depends(get_valid_vault)):
     try:
-        vault_path = get_vault_path(thread_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=400, detail="Vault path not set for this thread."
-        )
-
-    if not os.path.exists(vault_path):
-        raise HTTPException(status_code=404, detail="Vault path does not exist.")
-
-    try:
-        vault = ObsidianVault(vault_path)
         dashboard_service = DashboardService(vault)
         summary = dashboard_service.summary()
-
         return summary
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to process vault dashboard: {str(e)}"
+            status_code=500, detail=f"Failed to generate dashboard summary: {str(e)}"
         )
 
 
 @router.get("/orphaned")
-async def get_orphaned_notes(thread_id: str):
-    try:
-        vault_path = get_vault_path(thread_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=400, detail="Vault path not set for this thread."
-        )
-
-    vault = ObsidianVault(vault_path)
-    return {"orphaned_notes": vault.find_orphaned_notes()}
+async def get_orphaned_notes(vault: ObsidianVault = Depends(get_valid_vault)):
+    return vault.find_orphaned_notes()
 
 
 @router.get("/broken-links")
-async def get_broken_links(thread_id: str):
-    try:
-        vault_path = get_vault_path(thread_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=400, detail="Vault path not set for this thread."
-        )
-
-    vault = ObsidianVault(vault_path)
+async def get_broken_links(vault: ObsidianVault = Depends(get_valid_vault)):
     return vault.find_broken_links()
 
 
 @router.get("/untagged")
-async def get_untagged_notes(thread_id: str):
-    try:
-        vault_path = get_vault_path(thread_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=400, detail="Vault path not set for this thread."
-        )
-
-    vault = ObsidianVault(vault_path)
+async def get_untagged_notes(vault: ObsidianVault = Depends(get_valid_vault)):
     dashboard_service = DashboardService(vault)
-    untagged = dashboard_service.get_untagged_notes()
-
-    return {"untagged_notes": untagged}
+    return {"untagged_notes": dashboard_service.get_untagged_notes()}
