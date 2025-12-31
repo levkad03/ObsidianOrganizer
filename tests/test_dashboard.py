@@ -119,5 +119,5 @@ def test_dashboard_top_hubs(tmp_path):
 
     hubs = summary["top_hubs"]
 
-    assert hubs[0]["name"] == "NoteB"
+    assert hubs[0]["note"] == "NoteB"
     assert hubs[0]["backlinks"] == 2
