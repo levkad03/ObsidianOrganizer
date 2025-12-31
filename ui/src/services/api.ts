@@ -21,6 +21,25 @@ export interface ChatResponse {
   thread_id: string;
 }
 
+export interface DashboardSummary {
+  vault: {
+    path: string;
+  };
+  stats: {
+    total_notes: number;
+    orphaned_notes: number;
+    broken_links: number;
+    untagged_notes: number;
+    recent_notes: number;
+  };
+  recent_notes: string[];
+  top_hubs: {
+    note: string;
+    backlinks: number;
+  }[];
+  generated_at: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -142,6 +161,24 @@ class ApiClient {
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Unknown error');
     }
+  }
+
+  async getDashboardSummary(thread_id: string): Promise<DashboardSummary> {
+    const res = await fetch(`${this.baseUrl}/dashboard/summary?thread_id=${thread_id}`);
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to load dashboard');
+    }
+
+    return res.json();
+  }
+  async getOrphanedNotes(thread_id: string): Promise<string[]> {
+    const res = await fetch(`${this.baseUrl}/dashboard/orphaned?thread_id=${thread_id}`);
+
+    const data = await res.json();
+
+    return data.orphaned_notes;
   }
 }
 
