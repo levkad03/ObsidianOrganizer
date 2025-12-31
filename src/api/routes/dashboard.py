@@ -1,8 +1,5 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.agent.vault_registry import get_vault_path
 from src.api.dependencies import get_valid_vault
 from src.core.vault_manager import ObsidianVault
 from src.services.dashboard_service import DashboardService
