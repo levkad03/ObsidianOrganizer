@@ -61,5 +61,5 @@ class DashboardService:
             "top_hubs": [
                 {"name": name, "backlinks": count} for name, count in top_hubs
             ],
-            "gemerated_at": now,
+            "generated_at": now,
         }
