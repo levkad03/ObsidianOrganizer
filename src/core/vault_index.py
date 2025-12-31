@@ -38,6 +38,9 @@ class VaultIndex:
                     "metadata": note.metadata,
                     "links": note.links,
                     "tags": note.tags,
+                    "has_tags": bool(note.tags),
+                    "modified_at": file_path.stat().st_mtime,
+                    "word_count": len(note.content.split()),
                 }
             except Exception as e:
                 # Log the error but continue indexing

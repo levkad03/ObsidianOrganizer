@@ -21,6 +21,41 @@ export interface ChatResponse {
   thread_id: string;
 }
 
+export interface DashboardSummary {
+  vault: {
+    path: string;
+  };
+  stats: {
+    total_notes: number;
+    orphaned_notes: number;
+    broken_links: number;
+    untagged_notes: number;
+    recent_notes: number;
+  };
+  recent_notes: Array<{
+    name: string;
+    path: string;
+    modified_at: number;
+  }>;
+  top_hubs: Array<{
+    note: string;
+    backlinks: number;
+  }>;
+  generated_at: number;
+}
+
+export interface OrphanedNotesResponse {
+  orphaned_notes: string[];
+}
+
+export interface BrokenLinksResponse {
+  [filename: string]: string[];
+}
+
+export interface UntaggedNotesResponse {
+  untagged_notes: string[];
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -142,6 +177,31 @@ class ApiClient {
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Unknown error');
     }
+  }
+
+  async getDashboardSummary(threadId: string): Promise<DashboardSummary> {
+    try {
+      const response = await fetch(`${this.baseUrl}/dashboard/summary?thread_id=${threadId}`);
+      if (!response.ok) throw new Error('Failed to fetch dashboard summary');
+      return response.json();
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  async getOrphanedNotes(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/orphaned?thread_id=${threadId}`);
+    return res.json();
+  }
+
+  async getBrokenLinks(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/broken-links?thread_id=${threadId}`);
+    return res.json();
+  }
+
+  async getUntaggedNotes(threadId: string) {
+    const res = await fetch(`${this.baseUrl}/dashboard/untagged?thread_id=${threadId}`);
+    return res.json();
   }
 }
 

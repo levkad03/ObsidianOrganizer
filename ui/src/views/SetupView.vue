@@ -18,7 +18,7 @@ onMounted(() => {
   const savedThreadId = localStorage.getItem('threadId');
 
   if (savedPath && savedThreadId) {
-    router.push('/chat');
+    router.push('/dashboard');
   }
 });
 
@@ -66,7 +66,7 @@ const validateAndContinue = async () => {
     if (result.status === 'ok') {
       localStorage.setItem('vaultPath', vaultPath.value);
       localStorage.setItem('threadId', threadId);
-      router.push('/chat');
+      router.push('/dashboard');
     } else {
       error.value = 'Failed to configure vault';
     }
