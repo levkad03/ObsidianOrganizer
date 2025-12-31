@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, HTTPException
 
 from src.agent.vault_registry import get_vault_path
@@ -16,11 +18,19 @@ async def get_dashboard_summary(thread_id: str):
             status_code=400, detail="Vault path not set for this thread."
         )
 
-    vault = ObsidianVault(vault_path)
-    dashboard_service = DashboardService(vault)
-    summary = dashboard_service.summary()
+    if not os.path.exists(vault_path):
+        raise HTTPException(status_code=404, detail="Vault path does not exist.")
 
-    return summary
+    try:
+        vault = ObsidianVault(vault_path)
+        dashboard_service = DashboardService(vault)
+        summary = dashboard_service.summary()
+
+        return summary
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process vault dashboard: {str(e)}"
+        )
 
 
 @router.get("/orphaned")
