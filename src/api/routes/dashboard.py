@@ -69,8 +69,7 @@ async def get_untagged_notes(thread_id: str):
         )
 
     vault = ObsidianVault(vault_path)
-    index = vault.build_index()
-
-    untagged = [name for name, info in index.items() if not info.get("has_tags", False)]
+    dashboard_service = DashboardService(vault)
+    untagged = dashboard_service.get_untagged_notes()
 
     return {"untagged_notes": untagged}
