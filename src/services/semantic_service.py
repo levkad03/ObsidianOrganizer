@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 from langchain_core.embeddings import Embeddings
@@ -100,7 +101,7 @@ class SemanticService:
     def index_vault(
         self,
         notes: list[tuple[str, str, dict]],
-        progress_callback: callable[[int, int], None] | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> dict:
         """
         Index entire vault.
