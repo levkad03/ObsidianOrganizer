@@ -5,6 +5,7 @@ description = "AI agent for organizing Obsidian vaults"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "chromadb>=1.4.0",
     "fastapi>=0.124.4",
     "langchain>=0.3.27",
     "langchain-community>=0.3.27",
