@@ -42,6 +42,24 @@ class SemanticService:
         """Embed a batch of text strings."""
         return self.embedder.embed_documents(texts)
 
+    def _sanitize_metadata(self, metadata: dict) -> dict:
+        """
+        Ensure metadata values are compatible with ChromaDB (str, int, float, bool).
+        """
+        sanitized = {}
+        for k, v in metadata.items():
+            if isinstance(v, str | int | float | bool):
+                sanitized[k] = v
+            elif isinstance(v, list):
+                # Convert lists to comma-separated strings
+                sanitized[k] = ", ".join(str(item) for item in v)
+            elif v is None:
+                continue
+            else:
+                # Convert other types to string
+                sanitized[k] = str(v)
+        return sanitized
+
     def index_note(
         self, note_name: str, content: str, metadata: dict | None = None
     ) -> int:
@@ -55,6 +73,8 @@ class SemanticService:
         Returns:
             int: Number of chunks indexed
         """
+        if metadata:
+            metadata = self._sanitize_metadata(metadata)
 
         # Remove existing if already indexed
         if note_name in self.semantic_index.indexed_notes:
@@ -132,15 +152,65 @@ class SemanticService:
         Returns:
             dict: Search results with metadata and similarity scores
         """
+        final_k = top_k or self.config.TOP_K_RESULTS
 
-        # Build where filter for tags
-        where_filter = None
-        if filter_tags:
-            where_filter = {"tags": {"$in": filter_tags}}
+        # If filtering by tags, we fetch more candidates first (post-filtering)
+        # because ChromaDB stores tags as a single string "tag1, tag2"
+        fetch_k = final_k * 4 if filter_tags else final_k
 
-        return self.semantic_index.search_by_text(
-            query, embedder=self.embed_text, top_k=top_k, where=where_filter
+        results = self.semantic_index.search_by_text(
+            query, embedder=self.embed_text, top_k=fetch_k, where_filter=None
         )
+
+        if not filter_tags:
+            return results
+
+        # Post-filter results in Python
+        # Chroma results are column-oriented: {'ids': [[]], 'metadatas': [[]], ...}
+        # We assume single query, so we look at index 0
+
+        if not results["ids"] or not results["ids"][0]:
+            return results
+
+        filtered_indices = []
+
+        # Iterate through the first query's results
+        for idx, metadata in enumerate(results["metadatas"][0]):
+            if not metadata or "tags" not in metadata:
+                continue
+
+            # Tags are stored as "tag1, tag2, tag3"
+            stored_tags_str = str(metadata["tags"])
+            stored_tags = [t.strip() for t in stored_tags_str.split(",")]
+
+            # Check if ANY of the filter tags are present
+            if any(tag in stored_tags for tag in filter_tags):
+                filtered_indices.append(idx)
+
+            if len(filtered_indices) >= final_k:
+                break
+
+        # Reconstruct the results dictionary with only filtered items
+        new_results = {
+            "ids": [[results["ids"][0][i] for i in filtered_indices]],
+            "distances": [[results["distances"][0][i] for i in filtered_indices]]
+            if results.get("distances")
+            else None,
+            "metadatas": [[results["metadatas"][0][i] for i in filtered_indices]],
+            "documents": [[results["documents"][0][i] for i in filtered_indices]]
+            if results.get("documents")
+            else None,
+            "embeddings": [[results["embeddings"][0][i] for i in filtered_indices]]
+            if results.get("embeddings")
+            else None,
+        }
+
+        if "similarities" in results:
+            new_results["similarities"] = [
+                [results["similarities"][0][i] for i in filtered_indices]
+            ]
+
+        return new_results
 
     def find_similar_notes(
         self,
@@ -158,17 +228,31 @@ class SemanticService:
         Returns:
             dict: Search results with metadata and similarity scores
         """
-        # For simplicity, we embed the note name + any metadata
-        # A better approach would be to average embeddings of all chunks
-        query_text = note_name
+        # Try to get existing embeddings for the note
+        embeddings = self.semantic_index.get_note_embeddings(note_name)
+
+        if not embeddings:
+            # Fallback to name if not indexed (poor results expected)
+            query_embedding = self.embed_text(note_name)
+        else:
+            # Average the embeddings
+            # embeddings is list[list[float]]
+            dim = len(embeddings[0])
+            num_chunks = len(embeddings)
+            avg_embedding = [0.0] * dim
+            for emb in embeddings:
+                for i in range(dim):
+                    avg_embedding[i] += emb[i]
+
+            query_embedding = [x / num_chunks for x in avg_embedding]
 
         # Apply where filter to exclude self
         where_filter = None
         if not include_self:
             where_filter = {"note_name": {"$ne": note_name}}
 
-        return self.semantic_index.search_by_text(
-            query_text, embedder=self.embed_text, top_k=top_k, where_filter=where_filter
+        return self.semantic_index.search(
+            query_embedding, top_k=top_k, where_filter=where_filter
         )
 
     def get_index_stats(self) -> dict:

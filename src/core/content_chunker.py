@@ -82,9 +82,9 @@ class ContentChunker:
         )
 
     def _split_by_headers(self, content: str) -> list[str]:
-        """Split content by ## headers."""
-
-        sections = re.split(r"\n(?=##\s+)", content)
+        """Split content by markdown headers (H1-H6)."""
+        # Split by any markdown header (lines starting with #, ##, etc.)
+        sections = re.split(r"\n(?=#{1,6}\s+)", content)
         return [s for s in sections if s.strip()]
 
     def _chunk_by_size(self, text: str) -> list[str]:

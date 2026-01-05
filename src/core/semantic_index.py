@@ -182,3 +182,10 @@ class SemanticIndex:
             "indexed_notes": len(self.indexed_notes),
             "notes": sorted(list(self.indexed_notes)),
         }
+
+    def get_note_embeddings(self, note_name: str) -> list[list[float]]:
+        """Get all embeddings for a specific note."""
+        results = self.collection.get(
+            where={"note_name": note_name}, include=["embeddings"]
+        )
+        return results["embeddings"] if results and results["embeddings"] else []
