@@ -10,11 +10,13 @@ from src.agent.tools import (
     create_note_tool,
     find_broken_links_tool,
     find_orphaned_notes_tool,
+    find_similar_notes_tool,
     get_backlinks_tool,
     list_notes_tool,
     read_note_tool,
     replace_note_content_tool,
     search_notes_tool,
+    semantic_search_tool,
     suggest_connections_by_graph_tool,
     suggest_connections_by_keywords_tool,
     suggest_connections_by_tags_tool,
@@ -40,6 +42,8 @@ tools = [
     suggest_connections_by_tags_tool,
     suggest_connections_by_keywords_tool,
     suggest_connections_by_graph_tool,
+    find_similar_notes_tool,
+    semantic_search_tool,
 ]
 
 system_prompt = """You are an Obsidian vault assistant.

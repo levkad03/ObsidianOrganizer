@@ -2,6 +2,7 @@ from langchain.tools import tool
 from langchain_core.runnables import RunnableConfig
 
 from src.agent.vault_resolver import resolve_vault
+from src.services.semantic_service import SemanticService
 
 
 @tool
@@ -324,3 +325,88 @@ def suggest_connections_by_graph_tool(config: RunnableConfig) -> str:
     if len(suggestions) > 20:
         output += f"\n...and {len(suggestions) - 20} more suggestions."
     return output
+
+
+@tool
+def semantic_search_tool(query: str, config: RunnableConfig) -> list[dict]:
+    """
+    Search for notes semantically based on their meaning.
+
+    Use this tool when the user:
+    - Asks a vague question about their notes
+    - Wants to find information but doesn't know the exact keywords
+
+    Args:
+        query: The natural language search query.
+
+    Returns:
+        A list of search results with note names, similarity scores, and excerpts.
+
+
+    """
+    vault = resolve_vault(config)
+    service = SemanticService(vault.path)
+
+    results = service.search_by_text(query, top_k=5)
+
+    formatted_results = []
+    if results and results.get("ids"):
+        ids = results["ids"][0]
+        metadatas = results["metadatas"][0]
+        documents = results["documents"][0]
+        # Use the pre-calculated similarities from the service
+        similarities = results.get("similarities", [[]])[0]
+
+        for i in range(len(ids)):
+            formatted_results.append(
+                {
+                    "note": metadatas[i].get("note_name", "Unknown"),
+                    "content_snippet": documents[i],
+                    # Fallback to 0 if for some reason similarities is missing
+                    "similarity_score": similarities[i] if i < len(similarities) else 0,
+                    "metadata": metadatas[i],
+                }
+            )
+
+    return formatted_results
+
+
+@tool
+def find_similar_notes_tool(note_name: str, config: RunnableConfig) -> list[dict]:
+    """
+    Find notes that are semantically similar to a specific note.
+
+    Use this tool when the user:
+    - Wants to find "related" notes
+    - Want to see connections between notes based on content similarity
+    - Is looking for context around a specific topic
+
+    Args:
+        note_name (str): The name of the note.
+
+
+    Returns:
+        A list of similar notes with similarity scores.
+    """
+
+    vault = resolve_vault(config)
+    service = SemanticService(vault.path)
+
+    clean_name = note_name.replace(".md", "")
+    results = service.find_similar_notes(clean_name, top_k=5)
+    formatted_results = []
+    if results and results.get("ids"):
+        ids = results["ids"][0]
+        metadatas = results["metadatas"][0]
+        similarities = results.get("similarities", [[]])[0]
+
+        for i in range(len(ids)):
+            formatted_results.append(
+                {
+                    "note": metadatas[i].get("note_name", "Unknown"),
+                    "similarity_score": similarities[i] if i < len(similarities) else 0,
+                    "metadata": metadatas[i],
+                }
+            )
+
+    return formatted_results
