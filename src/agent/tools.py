@@ -134,13 +134,31 @@ def append_to_note_tool(name: str, content: str, config: RunnableConfig) -> str:
 
 @tool
 def search_notes_tool(query: str, config: RunnableConfig) -> str:
-    """Search for notes in the vault by keyword.
+    """Search for notes by EXACT keyword or phrase match.
 
-    Use this tool to find notes about a specific topic, search for content
-    containing certain words, or look for notes with specific tags.
+    Use this tool when:
+    - User asks for notes containing a SPECIFIC word, term, or phrase
+    - User wants to find notes with a particular tag (e.g. "#python", "#AI")
+    - User knows the exact title or part of a title
+    - User wants to find all occurrences of a specific technical term
+    - User asks "which notes mention X" or "find notes about X"
+
+    Examples:
+    - "Find notes mentioning 'gradient descent'"
+    - "Search for notes with the tag #machine-learning"
+    - "Which notes contain the word 'transformer'?"
+    - "Find notes titled 'Python'"
+
+    DO NOT use for:
+    - Conceptual questions or understanding requests
+    - When user asks vague questions without specific keywords
+    - When searching by meaning rather than exact words
 
     Args:
-        query: The keyword or phrase to search for
+        query: The exact keyword, phrase, or tag to search for
+
+    Returns:
+        Formatted list of notes with matched snippets
     """
     vault = resolve_vault(config)
     results = vault.search_notes(query)
@@ -329,20 +347,33 @@ def suggest_connections_by_graph_tool(config: RunnableConfig) -> str:
 
 @tool
 def semantic_search_tool(query: str, config: RunnableConfig) -> list[dict]:
-    """
-    Search for notes semantically based on their meaning.
+    """Search for notes by MEANING and conceptual similarity.
 
-    Use this tool when the user:
-    - Asks a vague question about their notes
-    - Wants to find information but doesn't know the exact keywords
+    Use this tool when:
+    - User asks a CONCEPTUAL or VAGUE question
+    - User wants to understand a topic from their notes
+    - User doesn't know exact keywords but describes what they want
+    - User asks "what do I know about X" or "explain Y based on my notes"
+    - User wants related notes even if they use different terminology
+    - Searching for ideas, concepts, or themes
+
+    Examples:
+    - "What do I know about neural networks?"
+    - "Find notes related to optimization techniques"
+    - "Show me information about training large models"
+    - "What notes are related to attention mechanisms?"
+
+    DO NOT use for:
+    - Finding exact keyword matches
+    - Searching for specific tags
+    - When user specifies an exact word or phrase to find
 
     Args:
-        query: The natural language search query.
+        query: Natural language description of what you're looking for
+        top_k: Number of results to return (default: 5)
 
     Returns:
-        A list of search results with note names, similarity scores, and excerpts.
-
-
+        Formatted list of semantically similar notes with relevance scores
     """
     vault = resolve_vault(config)
     service = SemanticService(vault.path)
