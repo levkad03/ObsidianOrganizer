@@ -8,6 +8,7 @@ dependencies = [
     "chromadb>=1.4.0",
     "fastapi>=0.124.4",
     "langchain>=0.3.27",
+    "langchain-chroma>=0.2.6",
     "langchain-community>=0.3.27",
     "langchain-groq>=0.3.8",
     "langchain-ollama>=0.3.6",
