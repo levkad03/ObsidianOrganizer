@@ -1,265 +1,334 @@
-from collections.abc import Callable
+import json
 from pathlib import Path
+from typing import Any
 
-from langchain_core.embeddings import Embeddings
-from langchain_ollama.embeddings import OllamaEmbeddings
+from langchain_chroma import Chroma
+from langchain_community.document_loaders import ObsidianLoader
+from langchain_core.documents import Document
+from langchain_ollama import OllamaEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.config.semantic_config import SemanticConfig
-from src.core.content_chunker import ContentChunker
-from src.core.semantic_index import SemanticIndex
 
 
 class SemanticService:
-    """Main service for semantic indexing and search."""
+    """Semantic search service using LangChain for Obsidian vaults."""
 
-    def __init__(
-        self, vault_path: Path, embedding_model: str | None = None, config_class=None
-    ):
+    def __init__(self, vault_path: Path, config_class: type | None = None) -> None:
+        """Initialize the semantic service.
+
+        Args:
+            vault_path: Path to the Obsidian vault
+            config_class: Optional configuration class (defaults to SemanticConfig)
+        """
         self.vault_path = vault_path
+        self.config = config_class() if config_class else SemanticConfig()
 
-        if config_class is None:
-            config_class = SemanticConfig
-
-        self.config = config_class()
-
-        self.embedding_model = embedding_model or self.config.EMBEDDING_MODEL
-
-        self.embedder = self._create_embedder()
-        self.semantic_index = SemanticIndex(vault_path, config_class=config_class)
-        self.chunker = ContentChunker(config_class=config_class)
-
-    def _create_embedder(self) -> Embeddings:
-        """Create embedding model instance."""
-        return OllamaEmbeddings(
-            model=self.embedding_model,
-            base_url=self.config.OLLAMA_BASE_URL,
+        # Initialize embeddings
+        self.embeddings = OllamaEmbeddings(
+            model=self.config.EMBEDDING_MODEL, base_url=self.config.OLLAMA_BASE_URL
         )
 
-    def embed_text(self, text: str) -> list[float]:
-        """Embed a single text string."""
-        return self.embedder.embed_query(text)
+        # Initialize vector store
+        self.vector_store = Chroma(
+            collection_name=self.config.CHROMA_COLLECTION_NAME,
+            embedding_function=self.embeddings,
+            persist_directory=str(self.config.get_chroma_path(vault_path)),
+        )
 
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Embed a batch of text strings."""
-        return self.embedder.embed_documents(texts)
+        # Text splitter
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.config.CHUNK_SIZE,
+            chunk_overlap=self.config.CHUNK_OVERLAP,
+            separators=["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " ", ""],
+        )
 
-    def _sanitize_metadata(self, metadata: dict) -> dict:
+    def _sanitize_metadata(
+        self, metadata: dict[str, Any]
+    ) -> dict[str, str | int | float | bool]:
         """
-        Ensure metadata values are compatible with ChromaDB (str, int, float, bool).
+        Sanitize metadata to be compatible with ChromaDB.
+        ChromaDB only accepts: str, int, float, bool
+
+        Args:
+            metadata: Raw metadata dictionary
+
+        Returns:
+            Sanitized metadata dictionary with only valid types
         """
         sanitized = {}
-        for k, v in metadata.items():
-            if isinstance(v, str | int | float | bool):
-                sanitized[k] = v
-            elif isinstance(v, list):
-                # Convert lists to comma-separated strings
-                sanitized[k] = ", ".join(str(item) for item in v)
-            elif v is None:
+
+        for key, value in metadata.items():
+            # Skip None values or empty keys
+            if value is None or not str(key).strip():
                 continue
+
+            clean_key = str(key).strip()
+
+            # Handle each type explicitly
+            if isinstance(value, bool):
+                sanitized[clean_key] = value
+            elif isinstance(value, int) and not isinstance(value, bool):
+                sanitized[clean_key] = value
+            elif isinstance(value, float):
+                # Skip NaN and Inf values
+                if value == value and abs(value) != float("inf"):
+                    sanitized[clean_key] = value
+            elif isinstance(value, str):
+                # Only add non-empty strings
+                if value.strip():
+                    sanitized[clean_key] = value.strip()
+            # Convert lists to comma-separated strings
+            elif isinstance(value, list):
+                if value:
+                    try:
+                        # Filter out None values
+                        filtered = [str(v) for v in value if v is not None]
+                        if filtered:
+                            sanitized[clean_key] = ", ".join(filtered)
+                    except Exception:
+                        pass
+            # Convert dicts to JSON strings
+            elif isinstance(value, dict):
+                if value:
+                    try:
+                        sanitized[clean_key] = json.dumps(value, ensure_ascii=False)
+                    except Exception:
+                        pass
+            # Convert other types (Path, datetime, etc.) to string
             else:
-                # Convert other types to string
-                sanitized[k] = str(v)
+                try:
+                    str_val = str(value).strip()
+                    if str_val:
+                        sanitized[clean_key] = str_val
+                except Exception:
+                    pass
+
         return sanitized
 
-    def index_note(
-        self, note_name: str, content: str, metadata: dict | None = None
-    ) -> int:
-        """Index a single note's content.
+    def _sanitize_documents(self, documents: list[Document]) -> list[Document]:
+        """
+        Sanitize all metadata in a list of documents.
 
         Args:
-            note_name (str): Name of the note
-            content (str): Content of the note
-            metadata (dict | None, optional): Additional metadata for the note.
+            documents: List of documents with potentially invalid metadata
 
         Returns:
-            int: Number of chunks indexed
+            List of documents with sanitized metadata
         """
-        if metadata:
-            metadata = self._sanitize_metadata(metadata)
+        sanitized_docs = []
 
-        # Remove existing if already indexed
-        if note_name in self.semantic_index.indexed_notes:
-            self.semantic_index.delete_note(note_name)
+        for doc in documents:
+            sanitized_metadata = self._sanitize_metadata(doc.metadata)
+            sanitized_doc = Document(
+                page_content=doc.page_content, metadata=sanitized_metadata
+            )
+            sanitized_docs.append(sanitized_doc)
 
-        # Chunk the content
-        chunks = self.chunker.chunk_content(content, note_name, metadata)
+        return sanitized_docs
 
-        # Embed chunks
-        texts = [c["text"] for c in chunks]
-        embeddings = self.embed_batch(texts)
-
-        # Store in index
-        self.semantic_index.add_documents(
-            documents=texts,
-            metadatas=[c["metadata"] for c in chunks],
-            ids=[c["chunk_id"] for c in chunks],
-            embeddings=embeddings,
-        )
-
-        return len(chunks)
-
-    def index_vault(
-        self,
-        notes: list[tuple[str, str, dict]],
-        progress_callback: Callable[[int, int], None] | None = None,
-    ) -> dict:
-        """
-        Index entire vault.
-
-        Args:
-            notes: List of (note_name, content, metadata) tuples
-            progress_callback: Optional callback(current, total) for progress
+    def index_vault(self) -> dict[str, Any]:
+        """Index entire vault using ObsidianLoader.
 
         Returns:
-            Dict with statistics
+            Dictionary with indexing statistics
         """
+        loader = ObsidianLoader(str(self.vault_path))
+        documents = loader.load()
 
-        total_notes = len(notes)
-        total_chunks = 0
+        # Split documents
+        splits = self.text_splitter.split_documents(documents)
 
-        # Process in batches
-        batch_size = self.config.BATCH_SIZE
+        # Sanitize metadata before adding to vector store
+        sanitized_splits = self._sanitize_documents(splits)
 
-        for batch_idx in range(0, total_notes, batch_size):
-            batch = notes[batch_idx : batch_idx + batch_size]
-
-            for note_name, content, metadata in batch:
-                chunks = self.index_note(note_name, content, metadata)
-                total_chunks += chunks
-
-            if progress_callback:
-                progress_callback(min(batch_idx + batch_size, total_notes), total_notes)
+        # Add to vector store
+        self.vector_store.add_documents(sanitized_splits)
 
         return {
             "status": "indexed",
-            "total_notes": total_notes,
-            "total_chunks": total_chunks,
-            "indexed_notes": list(self.semantic_index.indexed_notes),
+            "total_documents": len(documents),
+            "total_chunks": len(sanitized_splits),
         }
+
+    def index_note(self, note_path: Path) -> int:
+        """Index or re-index a single note.
+
+        Args:
+            note_path: Path to the note file
+
+        Returns:
+            Number of chunks created from the note
+        """
+        loader = ObsidianLoader(str(self.vault_path), collect_metadata=True)
+        documents = loader.load()
+
+        # Filter to specific note
+        note_docs = [d for d in documents if Path(d.metadata["source"]) == note_path]
+
+        if not note_docs:
+            return 0
+
+        # Delete existing chunks for this note
+        self.vector_store.delete(filter={"source": str(note_path)})
+
+        # Split and add
+        splits = self.text_splitter.split_documents(note_docs)
+        sanitized_splits = self._sanitize_documents(splits)
+
+        self.vector_store.add_documents(sanitized_splits)
+
+        return len(sanitized_splits)
 
     def search_by_text(
         self,
         query: str,
         top_k: int | None = None,
         filter_tags: list[str] | None = None,
-    ) -> dict:
-        """Semantic search by text query.
+    ) -> dict[str, Any]:
+        """Perform semantic search by text query.
 
         Args:
-            query (str): Text query to search for
-            top_k (int | None): Number of top results to return.
-            filter_tags (list[str] | None): Tags to filter results by.
+            query: Text query to search for
+            top_k: Number of top results to return (defaults to config value)
+            filter_tags: Optional list of tags to filter results
 
         Returns:
-            dict: Search results with metadata and similarity scores
+            Dictionary with search results containing documents, scores, and metadata
         """
-        final_k = top_k or self.config.TOP_K_RESULTS
+        k = top_k or self.config.TOP_K_RESULTS
 
-        # If filtering by tags, we fetch more candidates first (post-filtering)
-        # because ChromaDB stores tags as a single string "tag1, tag2"
-        fetch_k = final_k * 4 if filter_tags else final_k
+        if filter_tags:
+            # Fetch more results for post-filtering
+            results = self.vector_store.similarity_search_with_score(query, k=k * 3)
 
-        results = self.semantic_index.search_by_text(
-            query, embedder=self.embed_text, top_k=fetch_k, where_filter=None
-        )
+            # Post-filter by tags (tags are stored as comma-separated strings)
+            filtered_results = []
+            for doc, score in results:
+                doc_tags_str = doc.metadata.get("tags", "")
+                if doc_tags_str:
+                    doc_tags = [t.strip() for t in str(doc_tags_str).split(",")]
+                    if any(tag in doc_tags for tag in filter_tags):
+                        filtered_results.append((doc, score))
+                        if len(filtered_results) >= k:
+                            break
 
-        if not filter_tags:
-            return results
+            results = filtered_results
+        else:
+            results = self.vector_store.similarity_search_with_score(query, k=k)
 
-        # Post-filter results in Python
-        # Chroma results are column-oriented: {'ids': [[]], 'metadatas': [[]], ...}
-        # We assume single query, so we look at index 0
-
-        if not results["ids"] or not results["ids"][0]:
-            return results
-
-        filtered_indices = []
-
-        # Iterate through the first query's results
-        for idx, metadata in enumerate(results["metadatas"][0]):
-            if not metadata or "tags" not in metadata:
-                continue
-
-            # Tags are stored as "tag1, tag2, tag3"
-            stored_tags_str = str(metadata["tags"])
-            stored_tags = [t.strip() for t in stored_tags_str.split(",")]
-
-            # Check if ANY of the filter tags are present
-            if any(tag in stored_tags for tag in filter_tags):
-                filtered_indices.append(idx)
-
-            if len(filtered_indices) >= final_k:
-                break
-
-        # Reconstruct the results dictionary with only filtered items
-        new_results = {
-            "ids": [[results["ids"][0][i] for i in filtered_indices]],
-            "distances": [[results["distances"][0][i] for i in filtered_indices]]
-            if results.get("distances")
-            else None,
-            "metadatas": [[results["metadatas"][0][i] for i in filtered_indices]],
-            "documents": [[results["documents"][0][i] for i in filtered_indices]]
-            if results.get("documents")
-            else None,
-            "embeddings": [[results["embeddings"][0][i] for i in filtered_indices]]
-            if results.get("embeddings")
-            else None,
-        }
-
-        if "similarities" in results:
-            new_results["similarities"] = [
-                [results["similarities"][0][i] for i in filtered_indices]
-            ]
-
-        return new_results
+        return self._format_results(results)
 
     def find_similar_notes(
-        self,
-        note_name: str,
-        top_k: int | None = None,
-        include_self: bool = False,
-    ) -> dict:
-        """Find notes similar to a given note by name.
+        self, note_name: str, top_k: int | None = None
+    ) -> dict[str, Any]:
+        """Find notes similar to a given note.
 
         Args:
-            note_name (str): Name of the note to find similarities for
-            top_k (int | None): Number of top similar notes to return.
-            include_self (bool): Whether to include the note itself in the results.
+            note_name: Name of the note to find similarities for
+            top_k: Number of similar notes to return (defaults to config value)
 
         Returns:
-            dict: Search results with metadata and similarity scores
+            Dictionary with similar notes and their similarity scores
         """
-        # Try to get existing embeddings for the note
-        embeddings = self.semantic_index.get_note_embeddings(note_name)
+        k = top_k or self.config.TOP_K_RESULTS
 
-        if not embeddings:
-            # Fallback to name if not indexed (poor results expected)
-            query_embedding = self.embed_text(note_name)
-        else:
-            # Average the embeddings
-            # embeddings is list[list[float]]
-            dim = len(embeddings[0])
-            num_chunks = len(embeddings)
-            avg_embedding = [0.0] * dim
-            for emb in embeddings:
-                for i in range(dim):
-                    avg_embedding[i] += emb[i]
-
-            query_embedding = [x / num_chunks for x in avg_embedding]
-
-        # Apply where filter to exclude self
-        where_filter = None
-        if not include_self:
-            where_filter = {"note_name": {"$ne": note_name}}
-
-        return self.semantic_index.search(
-            query_embedding, top_k=top_k, where_filter=where_filter
+        # Get a sample chunk from the note to use as query
+        results = self.vector_store.similarity_search(
+            note_name, k=1, filter={"source": {"$regex": f".*{note_name}.*"}}
         )
 
-    def get_index_stats(self) -> dict:
-        """Get indexing statistics."""
-        return self.semantic_index.get_stats()
+        if not results:
+            return {"ids": [[]], "documents": [[]], "metadatas": [[]]}
+
+        # Use the chunk's embedding to find similar
+        similar = self.vector_store.similarity_search_with_score(
+            results[0].page_content,
+            k=k,
+            filter={"source": {"$ne": results[0].metadata["source"]}},
+        )
+
+        return self._format_results(similar)
+
+    def _format_results(self, results: list[tuple[Document, float]]) -> dict[str, Any]:
+        """Format search results into a structured dictionary.
+
+        Args:
+            results: List of tuples containing (Document, similarity_score)
+
+        Returns:
+            Dictionary with formatted results in ChromaDB-like format
+        """
+        if not results:
+            return {
+                "ids": [[]],
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+                "similarities": [[]],
+            }
+
+        documents = []
+        metadatas = []
+        distances = []
+        similarities = []
+        ids = []
+
+        for doc, score in results:
+            documents.append(doc.page_content)
+            metadatas.append(doc.metadata)
+            distances.append(score)
+
+            # Convert distance to similarity score
+            # Cosine distance range is [0, 2], so similarity = 1 - (distance / 2)
+            similarity = 1 - (score / 2)
+            similarities.append(similarity)
+
+            # Generate consistent ID from source
+            source = doc.metadata.get("source", "unknown")
+            chunk_id = f"{Path(source).stem}_{hash(doc.page_content) % 10000}"
+            ids.append(chunk_id)
+
+        # Return in ChromaDB-compatible format
+        return {
+            "ids": [ids],
+            "documents": [documents],
+            "metadatas": [metadatas],
+            "distances": [distances],
+            "similarities": [similarities],
+        }
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get indexing statistics.
+
+        Returns:
+            Dictionary with statistics about indexed documents
+        """
+        collection = self.vector_store._collection
+        count = collection.count()
+
+        # Get unique sources (notes)
+        all_docs = collection.get(include=["metadatas"])
+        unique_sources = set()
+        if all_docs and all_docs.get("metadatas"):
+            unique_sources = {
+                meta.get("source", "") for meta in all_docs["metadatas"] if meta
+            }
+
+        return {
+            "total_chunks": count,
+            "indexed_notes": len(unique_sources),
+            "notes": sorted([Path(s).stem for s in unique_sources if s]),
+        }
 
     def clear_index(self) -> None:
-        """Clear all embeddings."""
-        self.semantic_index.clear()
+        """Clear all documents from the vector store."""
+        collection_name = self.config.CHROMA_COLLECTION_NAME
+        self.vector_store._client.delete_collection(collection_name)
+
+        # Reinitialize the vector store
+        self.vector_store = Chroma(
+            collection_name=collection_name,
+            embedding_function=self.embeddings,
+            persist_directory=str(self.config.get_chroma_path(self.vault_path)),
+        )

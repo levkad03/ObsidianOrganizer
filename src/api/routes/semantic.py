@@ -1,10 +1,8 @@
-from pathlib import Path
-
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from src.api.dependencies import get_valid_vault
 from src.core.vault_manager import ObsidianVault
-from src.services.semantic_service_v2 import SemanticServiceV2 as SemanticService
+from src.services.semantic_service import SemanticService
 
 router = APIRouter(prefix="/semantic", tags=["semantic"])
 
