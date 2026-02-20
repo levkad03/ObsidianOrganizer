@@ -246,13 +246,18 @@ class ApiClient {
   }
 
   async indexNote(notePath: string): Promise<NoteIndexResponse> {
-    const res = await fetch(`${this.baseUrl}/semantic/index/note`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ note_path: notePath }),
-    });
+    // Thread id and note path must be in the query params
+    const threadId = localStorage.getItem('threadId');
+
+    const res = await fetch(
+      `${this.baseUrl}/semantic/index/note?thread_id=${threadId}&note_path=${encodeURIComponent(notePath)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || res.statusText);
