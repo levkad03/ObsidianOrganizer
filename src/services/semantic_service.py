@@ -233,19 +233,31 @@ class SemanticService:
         """
         k = top_k or self.config.TOP_K_RESULTS
 
-        # Get a sample chunk from the note to use as query
-        results = self.vector_store.similarity_search(
-            note_name, k=1, filter={"source": {"$regex": f".*{note_name}.*"}}
-        )
+        # Get candidates via text search, then find matching note in Python
+        results = self.vector_store.similarity_search(note_name, k=20)
 
-        if not results:
-            return {"ids": [[]], "documents": [[]], "metadatas": [[]]}
+        source_chunk = None
+        for r in results:
+            src = Path(r.metadata.get("source", "")).stem.lower()
+            if src == note_name.lower():
+                source_chunk = r
+                break
 
-        # Use the chunk's embedding to find similar
+        if not source_chunk:
+            return {
+                "ids": [[]],
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+                "similarities": [[]],
+            }
+
+        actual_source = source_chunk.metadata["source"]
+
         similar = self.vector_store.similarity_search_with_score(
-            results[0].page_content,
+            source_chunk.page_content,
             k=k,
-            filter={"source": {"$ne": results[0].metadata["source"]}},
+            filter={"source": {"$ne": actual_source}},
         )
 
         return self._format_results(similar)

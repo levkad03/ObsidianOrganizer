@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain.tools import tool
 from langchain_core.runnables import RunnableConfig
 
@@ -391,7 +393,7 @@ def semantic_search_tool(query: str, config: RunnableConfig) -> list[dict]:
         for i in range(len(ids)):
             formatted_results.append(
                 {
-                    "note": metadatas[i].get("note_name", "Unknown"),
+                    "note": Path(metadatas[i].get("source", "Unknown")).stem,
                     "content_snippet": documents[i],
                     # Fallback to 0 if for some reason similarities is missing
                     "similarity_score": similarities[i] if i < len(similarities) else 0,
@@ -434,7 +436,7 @@ def find_similar_notes_tool(note_name: str, config: RunnableConfig) -> list[dict
         for i in range(len(ids)):
             formatted_results.append(
                 {
-                    "note": metadatas[i].get("note_name", "Unknown"),
+                    "note": Path(metadatas[i].get("source", "Unknown")).stem,
                     "similarity_score": similarities[i] if i < len(similarities) else 0,
                     "metadata": metadatas[i],
                 }

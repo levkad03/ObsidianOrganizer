@@ -56,6 +56,33 @@ export interface UntaggedNotesResponse {
   untagged_notes: string[];
 }
 
+export interface IndexResponse {
+  status: string;
+  message: string;
+}
+
+export interface NoteIndexResponse {
+  status: 'success' | 'error';
+  note: string;
+  chunks_indexed: number;
+}
+
+export interface IndexStats {
+  total_documents: number;
+  total_chunks: number;
+}
+
+export interface SearchResult {
+  documents: any[];
+  scores: number[];
+  metadata: any[];
+}
+
+export interface ClearIndexResponse {
+  status: string;
+  message: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -201,6 +228,68 @@ class ApiClient {
 
   async getUntaggedNotes(threadId: string) {
     const res = await fetch(`${this.baseUrl}/dashboard/untagged?thread_id=${threadId}`);
+    return res.json();
+  }
+
+  async triggerIndexing(): Promise<IndexResponse> {
+    const threadId = localStorage.getItem('threadId');
+    const res = await fetch(`${this.baseUrl}/semantic/index?thread_id=${threadId}`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || res.statusText);
+    }
+
+    return res.json();
+  }
+
+  async indexNote(notePath: string): Promise<NoteIndexResponse> {
+    const res = await fetch(`${this.baseUrl}/semantic/index/note`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ note_path: notePath }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || res.statusText);
+    }
+    return res.json();
+  }
+
+  async getIndexStats(): Promise<IndexStats> {
+    const res = await fetch(`${this.baseUrl}/semantic/stats`);
+    if (!res.ok) throw new Error('Failed to fetch index state');
+    return res.json();
+  }
+
+  async semanticSearch(query: string, top_k: number = 5, tags?: string): Promise<SearchResult> {
+    const params = new URLSearchParams({ query, top_k: String(top_k) });
+
+    if (tags) params.set('tags', tags);
+    const res = await fetch(`${this.baseUrl}/semantic/search?${params}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || res.statusText);
+    }
+
+    return res.json();
+  }
+
+  async clearIndex(): Promise<ClearIndexResponse> {
+    const threadId = localStorage.getItem('threadId');
+    const res = await fetch(`${this.baseUrl}/semantic/index?thread_id=${threadId}`, {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || res.statusText);
+    }
+
     return res.json();
   }
 }
