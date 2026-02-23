@@ -43,9 +43,7 @@ class SemanticConfig:
         # Create a hash of vault path to uniquely identify it
         vault_hash = hashlib.md5(str(vault_path.resolve()).encode()).hexdigest()[:8]
 
-        from pathlib import Path as PathlibPath
-
-        project_root = PathlibPath(__file__).parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent
         data_dir = project_root / cls.CHROMA_DATA_DIR / vault_hash
         data_dir.mkdir(parents=True, exist_ok=True)
 
