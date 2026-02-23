@@ -32,6 +32,7 @@ def set_vault(thread_id: str, path: str) -> None:
         session.rollback()
         raise
     finally:
+        session.commit()
         session.close()
 
 
