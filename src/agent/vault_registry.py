@@ -28,11 +28,12 @@ def set_vault(thread_id: str, path: str) -> None:
         else:
             obj.vault_path = str(p)
 
+        session.commit()
+
     except SQLAlchemyError:
         session.rollback()
         raise
     finally:
-        session.commit()
         session.close()
 
 
