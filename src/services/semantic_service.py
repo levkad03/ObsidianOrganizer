@@ -86,14 +86,20 @@ class SemanticService:
                         filtered = [str(v) for v in value if v is not None]
                         if filtered:
                             sanitized[clean_key] = ", ".join(filtered)
-                    except Exception:
+                    except Exception as e:
+                        print(
+                            f"List sanitization failed for key '{clean_key}' with value: {value}. Error: {e}"
+                        )
                         pass
             # Convert dicts to JSON strings
             elif isinstance(value, dict):
                 if value:
                     try:
                         sanitized[clean_key] = json.dumps(value, ensure_ascii=False)
-                    except Exception:
+                    except Exception as e:
+                        print(
+                            f"Dict sanitization failed for key '{clean_key}' with value: {value}. Error: {e}"
+                        )
                         pass
             # Convert other types (Path, datetime, etc.) to string
             else:
@@ -101,7 +107,10 @@ class SemanticService:
                     str_val = str(value).strip()
                     if str_val:
                         sanitized[clean_key] = str_val
-                except Exception:
+                except Exception as e:
+                    print(
+                        f"String conversion failed for key '{clean_key}' with value: {value}. Error: {e}"
+                    )
                     pass
 
         return sanitized
