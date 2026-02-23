@@ -11,11 +11,24 @@ import { api, DashboardSummary } from '@/services/api';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 // Using Lucide icons for a cleaner look consistent with the new cards
-import { Activity, FileText, FileWarning, Link as LinkIcon, Tag } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import {
+  Activity,
+  Database,
+  FileText,
+  FileWarning,
+  Link as LinkIcon,
+  Tag,
+  Trash2,
+  Zap,
+} from 'lucide-vue-next';
 
 const router = useRouter();
 const loading = ref(true);
 const summary = ref<DashboardSummary | null>(null);
+
+const indexStatus = ref<'idle' | 'indexing' | 'success' | 'error'>('idle');
+const clearStatus = ref<'idle' | 'clearing' | 'success' | 'error'>('idle');
 
 // -- MODAL STATE --
 const isDetailsOpen = ref(false);
@@ -69,6 +82,33 @@ const showDetails = async (type: 'broken' | 'orphaned' | 'untagged') => {
     loadingDetails.value = false;
   }
 };
+
+// Semantic index actions
+const triggerIndex = async () => {
+  indexStatus.value = 'indexing';
+  try {
+    await api.triggerIndexing();
+    indexStatus.value = 'success';
+  } catch {
+    indexStatus.value = 'error';
+  } finally {
+    setTimeout(() => (indexStatus.value = 'idle'), 3000);
+  }
+};
+
+const doClearIndex = async () => {
+  if (!confirm('Clear the entire semantic index? This cannot be undone.')) return;
+  clearStatus.value = 'clearing';
+  try {
+    await api.clearIndex();
+    clearStatus.value = 'success';
+  } catch {
+    clearStatus.value = 'error';
+  } finally {
+    setTimeout(() => (clearStatus.value = 'idle'), 3000);
+  }
+};
+
 onMounted(async () => {
   const threadId = localStorage.getItem('threadId');
   if (!threadId) {
@@ -229,6 +269,59 @@ onMounted(async () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card class="bg-card/30 border-border/40">
+        <CardHeader class="pb-3">
+          <CardTitle class="text-sm font-medium flex items-center gap-2">
+            <Database class="h-4 w-4 text-primary" />
+            Semantic Index
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              class="gap-2"
+              :disabled="indexStatus == 'indexing'"
+              @click="triggerIndex"
+            >
+              <Zap
+                class="h-3.5 w-3.5"
+                :class="indexStatus == 'indexing' && 'animate-pulse text-yellow-400'"
+              />
+              {{ indexStatus === 'indexing' ? 'Indexing...' : 'Re-index Vault' }}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              class="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              :disabled="clearStatus == 'clearing'"
+              @click="doClearIndex"
+            >
+              <Trash2 class="h-3.5 w-3.5" />
+              {{ clearStatus === 'clearing' ? 'Clearing...' : 'Clear Index' }}
+            </Button>
+
+            <span v-if="indexStatus === 'success'" class="text-xs text-emerald-400"
+              >✓ Indexing started in background</span
+            >
+            <span v-else-if="indexStatus === 'error'" class="text-xs text-destructive"
+              >✗ Indexing failed</span
+            >
+            <span v-if="clearStatus === 'success'" class="text-xs text-emerald-400"
+              >✓ Index cleared</span
+            >
+            <span v-else-if="clearStatus === 'error'" class="text-xs text-destructive"
+              >✗ Failed to clear</span
+            >
+          </div>
+          <p class="text-xs text-muted-foreground/50 mt-3">
+            Indexing runs in the background - large vaults may take a few minutes.
+          </p>
+        </CardContent>
+      </Card>
     </div>
 
     <Dialog v-model:open="isDetailsOpen">
