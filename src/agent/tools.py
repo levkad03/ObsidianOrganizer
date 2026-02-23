@@ -50,27 +50,6 @@ def read_note_tool(name: str, config: RunnableConfig) -> dict:
 
 
 @tool
-def build_index_tool(config: RunnableConfig) -> dict:
-    """Build a comprehensive index of all notes in the vault with their metadata, links, and tags.
-
-    Use this tool when the user wants to:
-    - Understand the structure of the vault
-    - Find notes by tags or links
-    - See how notes are connected to each other
-    - Get an overview of all metadata across notes
-    - Analyze the vault organization
-
-    Returns a dictionary mapping note names to their info:
-    - "path": Relative file path
-    - "metadata": YAML frontmatter data
-    - "links": List of other notes this note links to (wikilinks)
-    - "tags": List of tags used in the note
-    """
-    vault = resolve_vault(config)
-    return vault.build_index()
-
-
-@tool
 def create_note_tool(name: str, content: str, config: RunnableConfig) -> str:
     """Create a new note in the Obsidian vault.
 

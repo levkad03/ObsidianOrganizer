@@ -6,7 +6,6 @@ from langgraph.prebuilt import create_react_agent
 
 from src.agent.tools import (
     append_to_note_tool,
-    build_index_tool,
     create_note_tool,
     find_broken_links_tool,
     find_orphaned_notes_tool,
@@ -32,7 +31,6 @@ tools = [
     list_notes_tool,
     read_note_tool,
     search_notes_tool,
-    build_index_tool,
     get_backlinks_tool,
     find_orphaned_notes_tool,
     find_broken_links_tool,
