@@ -372,7 +372,6 @@ def semantic_search_tool(query: str, config: RunnableConfig) -> list[dict]:
 
     Args:
         query: Natural language description of what you're looking for
-        top_k: Number of results to return (default: 5)
 
     Returns:
         Formatted list of semantically similar notes with relevance scores
