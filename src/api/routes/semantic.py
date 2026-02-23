@@ -56,6 +56,7 @@ async def index_single_note(
 
 @router.get("/search")
 async def search_notes(
+    thread_id: str,
     query: str,
     top_k: int = 5,
     tags: str | None = None,  # Comma-separated tags
