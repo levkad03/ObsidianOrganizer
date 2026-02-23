@@ -44,7 +44,7 @@ def get_vault_path(thread_id: str) -> Path | None:
     try:
         obj = session.get(Vault, thread_id)
         if obj:
-            p = Path(obj.vault_path)
+            p = Path(obj.vault_path).expanduser().resolve()
             _CACHE[thread_id] = p
             return p
 
